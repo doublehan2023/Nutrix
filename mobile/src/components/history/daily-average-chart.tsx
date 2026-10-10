@@ -33,7 +33,7 @@ export function DailyAverageChart({ days, selectedDay }: DailyAverageChartProps)
       <View className="mt-2 flex-row px-2">
         {days.map((day) => (
           <View className="flex-1 items-center" key={`label-${day.id}`}>
-            <Text className={`text-xs ${day.id === selectedDay ? 'font-semibold text-brand' : 'text-copy'}`}>
+            <Text className={`text-xs ${day.id === selectedDay ? 'font-semibold text-brand-dark' : 'text-copy'}`}>
               {day.id}
             </Text>
           </View>

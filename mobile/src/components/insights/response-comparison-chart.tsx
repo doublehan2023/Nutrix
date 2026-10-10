@@ -1,6 +1,8 @@
 import { Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Line, Path, Text as SvgText } from 'react-native-svg';
 
+import { colors } from '../../../constants/theme';
+
 type ResponseComparisonChartProps = {
   personal: readonly number[];
   population: readonly number[];
@@ -30,7 +32,7 @@ export function ResponseComparisonChart({ personal, population, minutes }: Respo
       <Text className="app-card-title">Personal vs population response</Text>
       <View className="mt-2 flex-row gap-5">
         <View className="flex-row items-center">
-          <View className="mr-2 h-0.5 w-5 bg-slate-400" />
+          <View className="mr-2 h-0.5 w-5 bg-copy" />
           <Text className="text-sm text-copy">Population average</Text>
         </View>
         <View className="flex-row items-center">
@@ -43,7 +45,7 @@ export function ResponseComparisonChart({ personal, population, minutes }: Respo
           {yTicks.map((tick) => (
             <Line
               key={tick}
-              stroke="#e2e8f0"
+              stroke={colors.border}
               strokeWidth={1}
               x1={chartPadding.left}
               x2={chartWidth - chartPadding.right}
@@ -52,15 +54,15 @@ export function ResponseComparisonChart({ personal, population, minutes }: Respo
             />
           ))}
           {yTicks.map((tick) => (
-            <SvgText fill="#94a3b8" fontSize={11} key={`label-${tick}`} textAnchor="end" x={chartPadding.left - 5} y={toY(tick) + 4}>
+            <SvgText fill={colors.mutedForeground} fontSize={11} key={`label-${tick}`} textAnchor="end" x={chartPadding.left - 5} y={toY(tick) + 4}>
               +{tick}
             </SvgText>
           ))}
-          <Path d={buildPath(population, toX, toY)} fill="none" stroke="#94a3b8" strokeDasharray="6 4" strokeWidth={2.5} />
-          <Path d={buildPath(personal, toX, toY)} fill="none" stroke="#2861f5" strokeWidth={3.5} />
+          <Path d={buildPath(population, toX, toY)} fill="none" stroke={colors.mutedForeground} strokeDasharray="6 4" strokeWidth={2.5} />
+          <Path d={buildPath(personal, toX, toY)} fill="none" stroke={colors.medication} strokeWidth={3.5} />
           {minutes.map((minute, index) => (
             <SvgText
-              fill="#94a3b8"
+              fill={colors.mutedForeground}
               fontSize={11}
               key={minute}
               textAnchor={index === 0 ? 'start' : index === minutes.length - 1 ? 'end' : 'middle'}

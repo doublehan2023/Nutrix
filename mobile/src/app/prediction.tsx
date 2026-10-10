@@ -61,9 +61,9 @@ export default function PredictionScreen() {
 
         <PredictionDrivers drivers={drivers} />
 
-        <View className="mt-4 rounded-card bg-amber-50 px-5 py-4">
-          <Text className="text-base font-semibold text-amber-800">Confidence: moderate · ±11 mg/dL</Text>
-          <Text className="mt-1 text-sm leading-5 text-amber-700">Learned from 7 days of personal data.</Text>
+        <View className="mt-4 rounded-card bg-status-low px-5 py-4">
+          <Text className="text-base font-semibold text-on-secondary">Confidence: moderate · ±11 mg/dL</Text>
+          <Text className="mt-1 text-sm leading-5 text-on-secondary">Learned from 7 days of personal data.</Text>
         </View>
 
         <Text className="mt-5 text-center text-xs leading-5 text-copy">

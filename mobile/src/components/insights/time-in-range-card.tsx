@@ -1,15 +1,16 @@
 import { Text, View } from 'react-native';
 
 import type { TimeInRange } from '@/data/insights';
+import { colors } from '../../../constants/theme';
 
 type TimeInRangeCardProps = {
   data: TimeInRange;
 };
 
 const rangeItems = [
-  { color: '#3b82f6', key: 'low', label: 'Low <70' },
-  { color: '#10b981', key: 'inRange', label: 'In range' },
-  { color: '#ef4444', key: 'high', label: 'High >140' },
+  { color: colors.secondary, key: 'low', label: 'Low <70' },
+  { color: colors.success, key: 'inRange', label: 'In range' },
+  { color: colors.destructive, key: 'high', label: 'High >140' },
 ] as const;
 
 export function TimeInRangeCard({ data }: TimeInRangeCardProps) {

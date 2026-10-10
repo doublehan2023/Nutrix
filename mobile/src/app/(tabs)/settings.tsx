@@ -15,7 +15,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView className="app-screen px-5 pt-5">
-      <Text className="text-sm font-semibold uppercase tracking-widest text-brand">
+      <Text className="text-sm font-semibold uppercase tracking-widest text-brand-dark">
         Nutrix
       </Text>
       <Text className="mt-3 text-4xl font-bold tracking-tight text-ink">
@@ -29,7 +29,7 @@ export default function SettingsScreen() {
           {user?.name ?? 'Your account'}
         </Text>
         <Text className="mt-1 text-sm text-copy">{user?.email}</Text>
-        <View className="mt-3 self-start rounded-full bg-brand-subtle px-3 py-1">
+        <View className="mt-3 self-start rounded-full bg-brand-soft px-3 py-1">
           <Text className="text-xs font-bold uppercase tracking-wide text-brand-dark">{user?.role}</Text>
         </View>
       </View>

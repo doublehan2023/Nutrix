@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 
 import type { HistoryDayId } from '@/data/history';
+import { colors } from '../../../constants/theme';
 
 type DaySelectorProps = {
   days: readonly HistoryDayId[];
@@ -26,13 +27,13 @@ export function DaySelector({ days, onSelect, selectedDay }: DaySelectorProps) {
             onPress={() => onSelect(day)}
             style={({ pressed }) => ({
               opacity: pressed ? 0.78 : 1,
-              shadowColor: '#0f172a',
+              shadowColor: colors.foreground,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: selected ? 0.16 : 0.06,
               shadowRadius: 8,
               elevation: 2,
             })}>
-            <Text className={`text-sm font-semibold ${selected ? 'text-white' : 'text-ink'}`}>{day}</Text>
+            <Text className={`text-sm font-semibold ${selected ? 'text-on-brand' : 'text-ink'}`}>{day}</Text>
           </Pressable>
         );
       })}

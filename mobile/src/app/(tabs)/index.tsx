@@ -13,6 +13,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { colors } from '../../../constants/theme';
+
 const MAX_IMAGE_EDGE = 2048;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
@@ -140,14 +142,14 @@ export default function TodayScreen() {
   return (
     <SafeAreaView className="app-screen px-5 pt-5">
       <ScrollView contentContainerClassName="pb-32">
-        <Text className="text-sm font-semibold uppercase tracking-widest text-brand">
+        <Text className="text-sm font-semibold uppercase tracking-widest text-brand-dark">
           Nutrix
         </Text>
         <Text className="mt-3 text-4xl font-bold tracking-tight text-ink">Today</Text>
         <Text className="app-body-copy mt-3">
           Your meal and glucose forecast will appear here.
         </Text>
-        <View className="mt-8 rounded-card border border-brand-soft bg-brand-subtle p-6">
+        <View className="mt-8 rounded-card border border-brand bg-brand-soft p-6">
           <Text className="text-base font-semibold text-ink">No forecast yet</Text>
           <Text className="mt-2 text-sm leading-5 text-copy">
             Log a meal to see its expected glucose response.
@@ -179,9 +181,9 @@ export default function TodayScreen() {
             disabled={status === 'processing'}
             onPress={choosePhotoSource}>
             {status === 'processing' ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
-              <Text className="font-semibold text-white">
+              <Text className="font-semibold text-on-brand">
                 {photo ? 'Replace meal photo' : 'Upload meal photo'}
               </Text>
             )}
@@ -193,7 +195,7 @@ export default function TodayScreen() {
               accessibilityRole="button"
               className="app-button-secondary mt-3"
               onPress={() => router.push('/prediction')}>
-              <Text className="font-semibold text-white">Predict glucose reponse</Text>
+              <Text className="font-semibold text-on-secondary">Predict glucose reponse</Text>
             </Pressable>
           ) : null}
 

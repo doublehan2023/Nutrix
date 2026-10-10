@@ -146,7 +146,7 @@ export default function SignInScreen() {
           disabled={isBusy}
           onPress={submit}
           style={({ pressed }) => [styles.signInButton, (pressed || isBusy) && styles.buttonMuted]}>
-          {isBusy ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.signInButtonText}>Sign in as {role}</Text>}
+          {isBusy ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.signInButtonText}>Sign in as {role}</Text>}
         </Pressable>
       </View>
 
@@ -165,17 +165,17 @@ export default function SignInScreen() {
 
 const styles = StyleSheet.create({
   roleTabs: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, marginBottom: 24 },
-  notice: { backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe', borderRadius: 12, padding: 12, marginBottom: 17 },
-  noticeTitle: { color: '#1e3a8a', fontSize: 14, fontWeight: '800', marginBottom: 3 },
-  noticeText: { color: '#334f7a', fontSize: 14, lineHeight: 19 },
+  notice: { backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: colors.primary, borderRadius: 12, padding: 12, marginBottom: 17 },
+  noticeTitle: { color: colors.onPrimary, fontSize: 14, fontWeight: '800', marginBottom: 3 },
+  noticeText: { color: colors.onPrimarySoft, fontSize: 14, lineHeight: 19 },
   form: { gap: 16 },
   field: { gap: 8 },
   label: { color: colors.foreground, fontSize: 16, fontWeight: '700' },
   input: { height: 54, borderWidth: 1, borderColor: colors.border, borderRadius: 14, color: colors.foreground, fontSize: 17, paddingHorizontal: 15, backgroundColor: colors.card },
   inputError: { borderColor: colors.destructive },
-  fieldError: { color: '#b91c1c', fontSize: 13, fontWeight: '600' },
+  fieldError: { color: colors.destructive, fontSize: 13, fontWeight: '600' },
   signInButton: { minHeight: 56, borderRadius: 14, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primary, marginTop: 2, elevation: 3 },
-  signInButtonText: { color: '#fff', fontSize: 17, fontWeight: '800' },
+  signInButtonText: { color: colors.onPrimary, fontSize: 17, fontWeight: '800' },
   buttonMuted: { opacity: 0.65 },
   linkRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', gap: 5, marginTop: 2, paddingVertical: 10 },
   linkCopy: { color: colors.mutedForeground, fontSize: 15 },

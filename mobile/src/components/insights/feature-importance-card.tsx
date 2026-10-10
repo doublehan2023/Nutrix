@@ -1,5 +1,7 @@
 import { Text, View } from 'react-native';
 
+import { colors } from '../../../constants/theme';
+
 type Feature = {
   label: string;
   value: number;
@@ -20,7 +22,7 @@ export function FeatureImportanceCard({ features }: FeatureImportanceCardProps) 
             <View className="h-2 flex-1 overflow-hidden rounded-full bg-line">
               <View
                 className="h-full rounded-full"
-                style={{ backgroundColor: index === 0 ? '#2861f5' : '#7fa0f9', width: `${feature.value}%` }}
+                style={{ backgroundColor: index === 0 ? colors.medication : colors.accent, width: `${feature.value}%` }}
               />
             </View>
             <Text className="ml-3 w-9 text-right text-sm font-medium text-ink">{feature.value}%</Text>

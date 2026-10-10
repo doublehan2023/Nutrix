@@ -48,7 +48,7 @@ export function Field({ label, ...props }: TextInputProps & { label: string }) {
     <View style={styles.fieldGroup}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        placeholderTextColor="#758094"
+        placeholderTextColor={colors.mutedForeground}
         style={styles.input}
         autoCapitalize="none"
         autoCorrect={false}
@@ -73,7 +73,7 @@ export function PrimaryButton({
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [styles.primaryButton, (disabled || pressed) && styles.buttonMuted]}>
-      {disabled ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>{label}</Text>}
+      {disabled ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.primaryButtonText}>{label}</Text>}
     </Pressable>
   );
 }
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   },
   header: { alignItems: 'center', marginBottom: 28 },
   mark: { width: 70, height: 70, borderRadius: 35, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, marginBottom: 13 },
-  markText: { color: '#fff', fontSize: 32, fontWeight: '800' },
+  markText: { color: colors.onPrimary, fontSize: 32, fontWeight: '800' },
   brand: { color: colors.primary, fontWeight: '800', fontSize: 12, letterSpacing: 2.4, marginBottom: 8 },
   title: { color: colors.foreground, fontSize: 30, fontWeight: '800', textAlign: 'center' },
   subtitle: { color: colors.mutedForeground, fontSize: 16, lineHeight: 23, textAlign: 'center', marginTop: 8 },
@@ -147,8 +147,8 @@ const styles = StyleSheet.create({
   label: { color: colors.foreground, fontSize: 16, fontWeight: '700', marginBottom: 8 },
   input: { height: 52, borderWidth: 1, borderColor: colors.border, borderRadius: 14, color: colors.foreground, fontSize: 17, paddingHorizontal: 15, backgroundColor: colors.card },
   primaryButton: { minHeight: 52, borderRadius: 14, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primary, marginTop: 4 },
-  primaryButtonText: { color: '#fff', fontSize: 17, fontWeight: '800' },
-  secondaryButton: { minHeight: 52, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: colors.primary, backgroundColor: '#eff6ff', marginTop: 10 },
+  primaryButtonText: { color: colors.onPrimary, fontSize: 17, fontWeight: '800' },
+  secondaryButton: { minHeight: 52, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.primarySoft, marginTop: 10 },
   secondaryButtonText: { color: colors.primary, fontSize: 17, fontWeight: '800' },
   buttonMuted: { opacity: 0.68 },
   textButton: { alignSelf: 'center', paddingVertical: 13, paddingHorizontal: 8 },
