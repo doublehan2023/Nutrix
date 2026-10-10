@@ -15,6 +15,7 @@ import pandas as pd
 from fastapi import HTTPException, Request
 from fastapi.routing import APIRoute
 from fastapi.responses import JSONResponse
+from starlette.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from service import app as base
@@ -52,6 +53,17 @@ def predict(pid: str, body: base.PredictIn):
 
 
 base.app.router.lifespan_context = lifespan
+
+
+cors_origins = [origin.strip() for origin in os.environ.get("MOBILE_CORS_ORIGINS", "").split(",") if origin.strip()]
+if cors_origins:
+    base.app.add_middleware(
+        CORSMiddleware,
+        allow_credentials=False,
+        allow_headers=["Authorization", "Content-Type"],
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_origins=cors_origins,
+    )
 
 
 class MobilePredictionIn(BaseModel):

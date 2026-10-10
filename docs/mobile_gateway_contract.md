@@ -20,3 +20,7 @@ The mobile app treats `401` as an expired session, `404` as an unprovisioned pro
 Before deployment, configure Clerk's session-token customization with `aud` set to `CLERK_JWT_AUDIENCE` and a `role`
 claim containing `patient`, `clinician`, or `admin`. Pass the two non-secret values, plus `CLERK_JWT_ISSUER`, to
 `scripts/deploy.sh` through the root `.env` file.
+
+For Expo Web, set `MOBILE_CORS_ORIGINS` in that file to the comma-separated browser origins that may call the
+gateway. The development defaults allow `http://localhost:8081` and `http://localhost:8082`; native clients do not
+use browser CORS.

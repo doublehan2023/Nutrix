@@ -43,7 +43,8 @@ echo "==> stack $STACK (ECS waits for the new task to pass health checks; first 
 aws cloudformation deploy --stack-name "$STACK" --template-file "$ROOT/infra/pmrf.yaml" \
   --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset \
   --parameter-overrides ImageUri="$IMAGE" VpcId="$VPC" SubnetA="$SUBNET_A" SubnetB="$SUBNET_B" \
-    ClerkJwtIssuer="$CLERK_JWT_ISSUER" ClerkJwtAudience="$CLERK_JWT_AUDIENCE"
+    ClerkJwtIssuer="$CLERK_JWT_ISSUER" ClerkJwtAudience="$CLERK_JWT_AUDIENCE" \
+    MobileCorsOrigins="${MOBILE_CORS_ORIGINS:-http://localhost:8081,http://localhost:8082}"
 
 URL="$(aws cloudformation describe-stacks --stack-name "$STACK" --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text)"
 echo "==> $URL/healthz"
