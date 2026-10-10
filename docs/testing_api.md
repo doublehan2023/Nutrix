@@ -79,6 +79,17 @@ curl -s -H "x-api-key: $PMRF_API_KEY" -H "content-type: application/json" \
 curl -s -H "x-api-key: $PMRF_API_KEY" $API/v1/people/cgmacros-003/profile | python -m json.tool
 ```
 
+Plot the glucose curve of the last `predict.sh` call (needs matplotlib, in `.venv`):
+
+```bash
+.venv/Scripts/python scripts/plot_prediction.py            # -> tests/integration/out/predict_<patient>.png
+.venv/Scripts/python scripts/plot_prediction.py my.json out.png
+```
+
+It draws `prediction.curve` (`minutes` 0–120 in 5-min steps, `glucose_mgdl`, 80% band `lower80`–`upper80`), the
+140 / 180 mg/dL lines with their probabilities, and the predicted peak. The peak is predicted on its own, not read off
+the curve, so it usually sits above the curve's top: the curve is an average and smooths the peak out.
+
 What to look at in the prediction:
 
 | Field | Meaning |
