@@ -119,7 +119,8 @@ def meal_profile(h):
     f = dict(p_n=len(h))
     if len(h):
         big = h[h.carbs >= 15]
-        slope = np.polyfit(h.carbs, h.dpeak, 1)[0] if len(h) >= 5 and h.carbs.std() > 5 else np.nan
+        hc = h[h.carbs.notna() & h.dpeak.notna()]          # meals recorded without nutrients (Shanghai) are left out of the fit
+        slope = np.polyfit(hc.carbs, hc.dpeak, 1)[0] if len(hc) >= 5 and hc.carbs.std() > 5 else np.nan
         f.update(p_dpeak=h.dpeak.mean(), p_dpeak_med=h.dpeak.median(), p_iauc=h.iauc.mean(), p_ttp=h.ttp.mean(),
                  p_dpeak_per10g=float(np.median(big.dpeak / (big.carbs / 10))) if len(big) else np.nan,
                  p_carb_slope=slope * len(h) / (len(h) + 5) if np.isfinite(slope) else np.nan)
