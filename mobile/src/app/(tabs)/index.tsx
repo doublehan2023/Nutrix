@@ -149,14 +149,7 @@ export default function TodayScreen() {
         <Text className="app-body-copy mt-3">
           Your meal and glucose forecast will appear here.
         </Text>
-        <View className="mt-8 rounded-card border border-brand bg-brand-soft p-6">
-          <Text className="text-base font-semibold text-ink">No forecast yet</Text>
-          <Text className="mt-2 text-sm leading-5 text-copy">
-            Log a meal to see its expected glucose response.
-          </Text>
-        </View>
-
-        <View className="app-card mt-6">
+        <View className="app-card mt-8">
           <Text className="app-card-title">Meal photo</Text>
           <Text className="mt-1 text-sm leading-5 text-copy">
             Add a photo to help capture your meal details.
