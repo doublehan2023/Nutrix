@@ -55,17 +55,6 @@ def predict(pid: str, body: base.PredictIn):
 base.app.router.lifespan_context = lifespan
 
 
-cors_origins = [origin.strip() for origin in os.environ.get("MOBILE_CORS_ORIGINS", "").split(",") if origin.strip()]
-if cors_origins:
-    base.app.add_middleware(
-        CORSMiddleware,
-        allow_credentials=False,
-        allow_headers=["Authorization", "Content-Type"],
-        allow_methods=["GET", "POST", "OPTIONS"],
-        allow_origins=cors_origins,
-    )
-
-
 class MobilePredictionIn(BaseModel):
     log_meal: bool = True
     meal_time: str
@@ -90,6 +79,19 @@ async def authenticate_mobile_routes(request: Request, call_next):
         headers.append((b"x-api-key", base.CFG["api_key"].encode()))
         request.scope["headers"] = headers
     return await call_next(request)
+
+
+# Register after the auth middleware: Starlette runs the last-added middleware first,
+# letting CORS answer browser preflight requests before token validation.
+cors_origins = [origin.strip() for origin in os.environ.get("MOBILE_CORS_ORIGINS", "").split(",") if origin.strip()]
+if cors_origins:
+    base.app.add_middleware(
+        CORSMiddleware,
+        allow_credentials=False,
+        allow_headers=["Authorization", "Content-Type"],
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_origins=cors_origins,
+    )
 
 
 def mobile_identity(request: Request):
