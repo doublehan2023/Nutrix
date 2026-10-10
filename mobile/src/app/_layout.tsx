@@ -1,19 +1,51 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
 
 import '@/global.css';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { AuthProvider, useAuth } from '@/auth/auth-provider';
+import { MealDraftProvider } from '@/features/meals/meal-draft-context';
+import { ClerkProvider } from '@clerk/expo';
+import { tokenCache } from '@clerk/expo/token-cache';
+import { colors } from '../../constants/theme';
+
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
+
+if (!publishableKey) {
+  throw new Error('Add EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY to mobile/.env.');
+}
 
 SplashScreen.preventAutoHideAsync();
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+function RootNavigator() {
+  const { isReady, user } = useAuth();
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <>
       <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+      <Stack screenOptions={{ headerShown: false, animation: 'fade', contentStyle: { backgroundColor: colors.background } }}>
+        <Stack.Screen name="index" />
+        <Stack.Protected guard={isReady && Boolean(user)}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="meal-edit" />
+          <Stack.Screen name="prediction" />
+        </Stack.Protected>
+        <Stack.Protected guard={isReady && !user}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+      </Stack>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+      <AuthProvider>
+        <MealDraftProvider>
+          <RootNavigator />
+        </MealDraftProvider>
+      </AuthProvider>
+    </ClerkProvider>
   );
 }
