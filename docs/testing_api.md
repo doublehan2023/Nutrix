@@ -1,6 +1,7 @@
 # Testing the deployed API
 
-Run from the repo root in Git Bash. Field reference: `model/docs/api_contract.md`. Architecture: `docs/architecture.md`.
+Run from the repo root in Git Bash. Endpoints, request bodies and errors: [api.md](api.md). Architecture:
+[architecture.md](architecture.md).
 
 ## 0. Setup
 
@@ -134,26 +135,16 @@ run; use the patients in section 4 for demos.
 
 ### History screen
 
-Two read-only calls serve the stored data per calendar day (the person's wall-clock time), added by
-`server/history_view.py`:
-
 ```bash
 # dates with data, oldest first, each with a glucose summary and meal / medication counts
 curl -s -H "x-api-key: $PMRF_API_KEY" $API/v1/people/cgmacros-003/history/days | python -m json.tool
-# one day (about 30 KB)
-curl -s -H "x-api-key: $PMRF_API_KEY" $API/v1/people/cgmacros-003/history/days/2020-03-18 | python -m json.tool
+# one day: 5-min CGM and heart rate, meals with photo URL and observed response, medication
+curl -s -H "x-api-key: $PMRF_API_KEY" $API/v1/people/cgmacros-003/history/days/2020-03-12 | python -m json.tool
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `history_window` | The model's first week: `start` (t0 from `/history`), `end`, `days`. It usually starts mid-day, so each date and meal also has `in_history_window` |
-| `days[]` | `date`, `cgm_readings`, `mean_glucose_mgdl`, `min_glucose_mgdl`, `max_glucose_mgdl`, `time_in_range_pct` (70–180 mg/dL), `hr_readings`, `meals`, `meds` |
-| `cgm[]` | Stored readings `{t, mgdl}` |
-| `hr[]` | Heart rate averaged per 5 minutes `{t, bpm}` |
-| `meals[]` | `time`, `meal_type`, nutrition (`carbs_g` …, logged or estimated), `source` (`history`, `logged`, `predicted`), `photo_key`, `photo_url` (presigned GET, valid 1 h), `observed` (same fields as in `/predict`, or null without enough CGM) |
-| `meds[]` | `time`, `med_class`, `dose` |
-
-A date without any stored data returns 404, a malformed date 422.
+Fields: [api.md](api.md#get-historydays). Checked on 2026-10-10 against `cgmacros-003`: 11 dates, the first 7 in the
+history window; 2020-03-12 returns 288 CGM and 288 heart-rate points (30 KB), three first-week meals with observed
+responses, and each `photo_url` downloads the JPEG.
 
 ## 4. Onboarded patients
 
@@ -203,11 +194,4 @@ A new person needs a first week of data before `/predict` works:
 
 ## 6. Errors
 
-| Status | Meaning |
-| --- | --- |
-| 401 | Missing or wrong `x-api-key` |
-| 404 | Person not onboarded yet (no `/history`), or the photo key does not exist |
-| 409 | No CGM reading in the 30 min before the meal: send `/signals` or `recent_cgm` |
-| 422 | Invalid request: not an image, values out of range, wrong types |
-| 429 | Throttled: API Gateway allows 10 requests/s (burst 20) |
-| 503 / 504 | Service starting or overloaded: check CloudWatch logs `/ecs/pmrf` |
+Status codes and their meaning: [api.md](api.md#errors).

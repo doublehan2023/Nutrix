@@ -55,7 +55,7 @@ flowchart LR
 | `scripts/` | Build, test and deploy entry points | Deployment |
 | `ops/data/` | Dataset sync with S3 and test-photo selection | Deployment |
 | `tests/integration/` | Tests against a running service: day-8 meals of the onboarded patients (`day8_meals.csv`) and unseen hospital meal photos | Deployment |
-| `docs/` | [Deployment architecture](docs/architecture.md), [testing the deployed API](docs/testing_api.md) and notes: AWS account, buckets, model artifacts, decisions | Deployment |
+| `docs/` | [API reference](docs/api.md), [deployment architecture](docs/architecture.md), [testing the deployed API](docs/testing_api.md) and notes: AWS account, buckets, model artifacts, decisions | Deployment |
 | `infra/` | CloudFormation stack for the service (API Gateway, ALB, ECS Fargate, DynamoDB, S3) | Deployment |
 | `server/` | AWS image layer: runs the model service with person data on DynamoDB + S3 (`model/` unchanged) | Deployment |
 | `.github/workflows/` | CI: lint and image build, no AWS access | Deployment |
