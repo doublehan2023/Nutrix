@@ -52,7 +52,7 @@ flowchart LR
 | `scripts/` | Build, test and deploy entry points | Deployment |
 | `ops/data/` | Dataset sync with S3 and test-photo selection | Deployment |
 | `tests/integration/` | Tests against a running service, incl. unseen hospital meal photos | Deployment |
-| `docs/` | [Deployment architecture](docs/architecture.md) and notes: AWS account, buckets, model artifacts, decisions | Deployment |
+| `docs/` | [Deployment architecture](docs/architecture.md), [testing the deployed API](docs/testing_api.md) and notes: AWS account, buckets, model artifacts, decisions | Deployment |
 | `infra/` | CloudFormation stack for the service (API Gateway, ALB, ECS Fargate, EFS) | Deployment |
 | `.github/workflows/` | CI: lint and image build, no AWS access | Deployment |
 
@@ -71,6 +71,8 @@ curl localhost:8080/healthz
 ```
 
 ## Tests
+
+Against the deployed API: [docs/testing_api.md](docs/testing_api.md).
 
 ```bash
 ./scripts/test.sh                                   # static checks (same as CI)
