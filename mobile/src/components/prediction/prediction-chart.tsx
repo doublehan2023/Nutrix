@@ -17,7 +17,6 @@ type PredictionChartProps = {
 };
 
 const yTicks = [80, 100, 120, 140, 160, 180] as const;
-const xLabelIndexes = [0, 2, 4, 6, 8] as const;
 const chartHeight = 210;
 const chartPadding = { bottom: 28, left: 34, right: 8, top: 12 };
 const minGlucose = 80;
@@ -48,6 +47,9 @@ function ChartLegend() {
 
 export function PredictionChart({ data, day }: PredictionChartProps) {
   const { width } = useWindowDimensions();
+  const xLabelIndexes = [0, 0.25, 0.5, 0.75, 1].map((fraction) =>
+    Math.round((data.minutes.length - 1) * fraction),
+  );
   const chartWidth = Math.max(260, width - 88);
   const plotWidth = chartWidth - chartPadding.left - chartPadding.right;
   const plotHeight = chartHeight - chartPadding.top - chartPadding.bottom;

@@ -96,3 +96,21 @@ export function createGatewayClient({ getToken }: GatewayClientOptions) {
       }),
   };
 }
+
+export async function uploadMealPhoto(photoUri: string, upload: PhotoUpload) {
+  let body: Blob;
+  try {
+    const photo = await fetch(photoUri);
+    if (!photo.ok) throw new Error('photo read failed');
+    body = await photo.blob();
+  } catch {
+    throw new GatewayError('Unable to prepare the selected photo for upload. Try choosing it again.');
+  }
+
+  try {
+    const response = await fetch(upload.uploadUrl, { body, headers: upload.headers, method: 'PUT' });
+    if (!response.ok) throw new Error('upload failed');
+  } catch {
+    throw new GatewayError('Photo upload failed. Check your connection and try again.');
+  }
+}
