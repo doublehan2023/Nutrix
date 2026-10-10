@@ -6,6 +6,7 @@ for the hackathon's synthetic data.
 """
 from dataclasses import dataclass, field
 import os
+import re
 import glob
 import numpy as np
 import pandas as pd
@@ -151,4 +152,119 @@ def load_challenge(root):
         mp = os.path.join(pdir, "meds.csv")
         meds = pd.read_csv(mp, parse_dates=["timestamp"]).rename(columns={"timestamp": "time"}) if os.path.exists(mp) else pd.DataFrame(columns=MED_COLUMNS)
         persons[pid] = Person(pid, cgm, hr, meals, meds, c.timestamp.iloc[0])
+    return persons
+
+
+# ---------------------------------------------------------------- Shanghai T1DM / T2DM (Zhao et al. 2023, figshare, CC BY 4.0)
+_BASAL = ("degludec", "detemir", "glargine", "glarigine")
+_RAPID = ("aspart", "glulisine", "lispro", "novolin r", "humulin r", "gansulin r", "novorapid", "humalog", "regular")
+_ORAL = [(("metformin",), "metformin"), (("acarbose", "voglibose", "miglitol", "repaglinide", "nateglinide", "pioglitazone"), "other"),
+         (("sitagliptin", "linagliptin", "saxagliptin", "vildagliptin", "alogliptin"), "dpp4"),
+         (("gliclazide", "glimepiride", "glipizide", "gliquidone", "glibenclamide"), "sulfonylurea"),
+         (("dapagliflozin", "canagliflozin", "empagliflozin"), "sglt2"),
+         (("liraglutide", "dulaglutide", "semaglutide", "exenatide", "loxenatide"), "glp1")]
+
+
+def _insulin_entries(text):
+    """'insulin aspart 30/70, 12 IU', 'Novolin 30R, 10 IU', 'Humulin 70/30 8 IU', 'insulin degludec, 14 IU' -> [(class, IU)];
+    premixed insulin is split into its rapid and intermediate (counted as basal) parts"""
+    out = []
+    text = str(text)
+    for m in re.finditer(r"(\d+(?:\.\d+)?)\s*IU\s+(Novolin R|Humulin R|Gansulin R)", text):    # i.v. drips: '4 IU Novolin R'
+        out.append(("rapid_insulin", float(m.group(1))))
+    if out:
+        return out
+    for m in re.finditer(r"([A-Za-z][A-Za-z\s\u00a0]*?(?:\s?M?\d+(?:/\d+|R)?)?)\s*,?\s*(\d+(?:\.\d+)?)\s*IU", text):
+        name, dose = m.group(1).replace("\u00a0", " ").strip().lower(), float(m.group(2))
+        frac = None
+        r = re.search(r"(\d+)\s*/\s*(\d+)", name)
+        if r:                                                   # aspart 30/70 = 30 % rapid; Humulin 70/30 = 30 % regular
+            a, b = int(r.group(1)), int(r.group(2))
+            frac = (a if "aspart" in name or "lispro" in name else b) / 100
+        elif re.search(r"(\d+)r\b", name) or re.search(r"\bm(\d+)", name):
+            frac = int((re.search(r"(\d+)r\b", name) or re.search(r"\bm(\d+)", name)).group(1)) / 100
+        if frac is not None:
+            out += [("rapid_insulin", dose * frac), ("basal_insulin", dose * (1 - frac))]
+        elif any(k in name for k in _BASAL):
+            out.append(("basal_insulin", dose))
+        elif any(k in name for k in _RAPID) or name.endswith(" r"):
+            out.append(("rapid_insulin", dose))
+    return out
+
+
+def _oral_entries(text):
+    out = []
+    for part in re.split(r"[,;，]", str(text)):
+        p = part.strip().lower()
+        nums = [float(n) * (1000 if u == "g" else 1) for n, u in re.findall(r"(\d+(?:\.\d+)?)\s*(mg|g)\b", p)]
+        hit = sorted({(p.find(k), cls) for keys, cls in _ORAL for k in keys if k in p})   # in order of appearance
+        for j, (_, cls) in enumerate(hit):              # combination tablets ('a/b tablets 50 mg / 850 mg'): doses in order
+            out.append((cls, nums[j] if j < len(nums) else (nums[0] if nums else np.nan)))
+    return out
+
+
+def shanghai_meal_key(en, zh):
+    import hashlib
+    return hashlib.sha1(f"{en}||{zh}".encode()).hexdigest()[:16]
+
+
+def load_shanghai_meals(root, nutrients_jsonl, prefix="S"):
+    """Shanghai T1DM/T2DM CGM sessions as Person records: 15-min CGM (FreeStyle Libre Pro, linear to 1 min across gaps of up
+    to 15 min), no heart rate, meals at the recorded CGM row time (+-15 min) with nutrients computed from the food weights by
+    an LLM (scripts/shanghai_meal_nutrients.py; records marked 'data not available' are kept as meals without nutrients),
+    insulin (pen, pump bolus/basal, i.v.) and oral glucose-lowering drugs. One record per CGM session."""
+    import json, json as _j, warnings
+    nut = {}
+    if os.path.exists(nutrients_jsonl):
+        for line in open(nutrients_jsonl):
+            d = _j.loads(line)
+            p = d.get("parsed") or {}
+            vals = [p.get(k) for k in ("carbs_g", "protein_g", "fat_g", "fiber_g")]
+            if all(isinstance(v, (int, float)) for v in vals):
+                nut[d["key"]] = vals
+    persons = {}
+    for kind in ("T1DM", "T2DM"):
+        for f in sorted(glob.glob(os.path.join(root, "*", f"Shanghai_{kind}", "*.xls*"))):
+            if os.path.basename(f).startswith("~$"):
+                continue
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                d = pd.read_excel(f)
+            d.columns = [str(c).strip() for c in d.columns]
+            d["t"] = pd.to_datetime(d["Date"], errors="coerce")
+            d = d[d.t.notna()].sort_values("t")
+            gcol = [c for c in d.columns if c.startswith("CGM")][0]
+            g = pd.Series(pd.to_numeric(d[gcol], errors="coerce").to_numpy(), index=d.t.dt.floor("min")).dropna()
+            g = g.groupby(level=0).mean()
+            if len(g) < 96:
+                continue
+            grid = pd.date_range(g.index[0], g.index[-1], freq="min")
+            cgm = g.reindex(grid).interpolate(limit=15, limit_area="inside")
+            meals = []
+            if "Dietary intake" in d:
+                for _, r in d[d["Dietary intake"].notna()].iterrows():
+                    en, zh = str(r["Dietary intake"]).strip(), str(r.get("饮食", "")).strip()
+                    c, p_, fa, fi = nut.get(shanghai_meal_key(en, zh), [np.nan] * 4)
+                    kcal = 4 * c + 4 * p_ + 9 * fa
+                    meals.append(dict(time=r.t, meal_type=_meal_type_from_time(r.t, kcal if np.isfinite(kcal) else 1000.0),
+                                      carbs=c, protein=p_, fat=fa, fiber=fi, kcal=kcal, photo=None))
+            meds = []
+            for c in d.columns:
+                cl = c.lower()
+                for t, v in zip(d.t, d[c]):
+                    if pd.isna(v):
+                        continue
+                    if cl.startswith("insulin dose"):
+                        meds += [(t, k, x) for k, x in _insulin_entries(v)]
+                    elif "non-insulin" in cl:
+                        meds += [(t, k, x) for k, x in _oral_entries(v)]
+                    elif cl.startswith("csii") or c.startswith("胰岛素泵"):
+                        x = pd.to_numeric(v, errors="coerce")
+                        if np.isfinite(x):
+                            meds.append((t, "rapid_insulin" if "bolus" in cl else "basal_insulin", float(x)))
+            pid = prefix + os.path.splitext(os.path.basename(f))[0]
+            persons[pid] = Person(pid=pid, cgm=cgm, hr=pd.Series(np.nan, index=grid),
+                                  meals=pd.DataFrame(meals, columns=["time", "meal_type", "carbs", "protein", "fat", "fiber", "kcal", "photo"]),
+                                  meds=pd.DataFrame(meds, columns=MED_COLUMNS), t0=grid[0],
+                                  meta=dict(group="T1D" if kind == "T1DM" else "T2D", source="shanghai"))
     return persons
