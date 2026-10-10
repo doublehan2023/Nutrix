@@ -12,7 +12,7 @@ export function messageForClerkError(error: unknown) {
     form_code_incorrect: 'That code is invalid. Please try again.',
     verification_expired: 'That code has expired. Request a new one and try again.',
     form_password_pwned: 'Choose a stronger password that has not appeared in a data breach.',
-    form_password_length_too_short: 'Choose a longer password.',
+    form_password_length_too_short: 'Use a password with at least 8 characters.',
   };
 
   return (first?.code && messages[first.code]) ?? first?.longMessage ?? first?.message ?? 'We could not complete that request. Please try again.';

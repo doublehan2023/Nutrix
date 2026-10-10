@@ -11,6 +11,10 @@ import {
   TextButton,
 } from "@/components/auth/auth-ui";
 import { messageForClerkError } from "@/auth/clerk-error";
+import {
+  meetsPasswordRequirement,
+  passwordRequirement,
+} from "@/auth/password-policy";
 
 export default function ResetPasswordScreen() {
   const { email: rawEmail } = useLocalSearchParams<{ email?: string }>();
@@ -27,6 +31,10 @@ export default function ResetPasswordScreen() {
     setError(undefined);
     if (!code.trim() || !password || !confirmPassword) {
       setError("Enter your code and new password.");
+      return;
+    }
+    if (!meetsPasswordRequirement(password)) {
+      setError(passwordRequirement);
       return;
     }
     if (password !== confirmPassword) {

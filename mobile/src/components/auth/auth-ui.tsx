@@ -86,6 +86,23 @@ export function TextButton({ label, onPress }: { label: string; onPress: () => v
   );
 }
 
+export function SecondaryButton({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonMuted]}>
+      <Text style={styles.secondaryButtonText}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export function ErrorMessage({ message }: { message?: string }) {
   if (!message) {
     return null;
@@ -131,6 +148,8 @@ const styles = StyleSheet.create({
   input: { height: 52, borderWidth: 1, borderColor: '#bdc8d7', borderRadius: 14, color: '#101827', fontSize: 17, paddingHorizontal: 15, backgroundColor: '#fff' },
   primaryButton: { minHeight: 52, borderRadius: 14, justifyContent: 'center', alignItems: 'center', backgroundColor: '#2563eb', marginTop: 4 },
   primaryButtonText: { color: '#fff', fontSize: 17, fontWeight: '800' },
+  secondaryButton: { minHeight: 52, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#2563eb', backgroundColor: '#eff6ff', marginTop: 10 },
+  secondaryButtonText: { color: '#1d4ed8', fontSize: 17, fontWeight: '800' },
   buttonMuted: { opacity: 0.68 },
   textButton: { alignSelf: 'center', paddingVertical: 13, paddingHorizontal: 8 },
   textButtonLabel: { color: '#1d4ed8', fontSize: 15, fontWeight: '700', textAlign: 'center' },
