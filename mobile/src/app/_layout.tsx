@@ -25,6 +25,7 @@ function RootNavigator() {
         <Stack.Screen name="index" />
         <Stack.Protected guard={isReady && Boolean(user)}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="prediction" />
         </Stack.Protected>
         <Stack.Protected guard={isReady && !user}>
           <Stack.Screen name="(auth)" />

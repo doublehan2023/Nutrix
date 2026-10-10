@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const MAX_IMAGE_EDGE = 2048;
@@ -69,6 +70,7 @@ async function normalizeMealPhoto(asset: ImagePicker.ImagePickerAsset): Promise<
 }
 
 export default function TodayScreen() {
+  const router = useRouter();
   const [photo, setPhoto] = useState<MealPhoto | null>(null);
   const [status, setStatus] = useState<PhotoStatus>('idle');
 
@@ -184,6 +186,16 @@ export default function TodayScreen() {
               </Text>
             )}
           </Pressable>
+
+          {photo ? (
+            <Pressable
+              accessibilityLabel="Predict glucose reponse"
+              accessibilityRole="button"
+              className="mt-3 items-center rounded-2xl bg-teal-700 px-4 py-4 active:bg-teal-800"
+              onPress={() => router.push('/prediction')}>
+              <Text className="font-semibold text-white">Predict glucose reponse</Text>
+            </Pressable>
+          ) : null}
 
           {status === 'processing' ? (
             <Text className="mt-3 text-center text-sm text-slate-600">Preparing your photo…</Text>
