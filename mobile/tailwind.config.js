@@ -11,7 +11,7 @@ module.exports = {
         muted: "#f6eecf",
         "muted-foreground": "rgba(0, 0, 0, 0.6)",
         primary: "#081126",
-        accent: "#1f7a6e",
+        accent: "#5ab1fa",
         border: "rgba(0, 0, 0, 0.1)",
         success: "#16a34a",
         destructive: "#dc2626",
