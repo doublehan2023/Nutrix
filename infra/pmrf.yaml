@@ -20,6 +20,12 @@ Parameters:
   DesiredCount:
     Type: Number
     Default: 1
+  ClerkJwtIssuer:
+    Type: String
+    Description: Clerk JWT issuer, for example https://example.clerk.accounts
+  ClerkJwtAudience:
+    Type: String
+    Description: Required aud claim in the Clerk session-token template
 
 Resources:
   # ---------- API key (x-api-key, checked by the service until API Gateway auth is set up)
@@ -207,6 +213,8 @@ Resources:
             - {Name: PMRF_MAX_CONCURRENT, Value: "2"}
             - {Name: PMRF_TABLE, Value: !Ref PeopleTable}
             - {Name: PMRF_STATE_BUCKET, Value: !Ref StateBucket}
+            - {Name: CLERK_JWT_ISSUER, Value: !Ref ClerkJwtIssuer}
+            - {Name: CLERK_JWT_AUDIENCE, Value: !Ref ClerkJwtAudience}
           Secrets:
             - {Name: PMRF_API_KEY, ValueFrom: !Ref ApiKeySecret}
           LogConfiguration:
