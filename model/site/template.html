@@ -365,6 +365,32 @@ figure.arch .lb { fill: var(--muted); font-size: 11.5px; }
         </tbody>
       </table></div>
 
+      <h3>CGMacros, column by column</h3>
+      <p>One CSV per person, one row per minute: 687,580 rows across the 45 files. Most files have the same 15 columns, and a few differ (19 distinct columns overall). Meal columns are filled only on the 1,706 meal rows.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Column</th><th>Meaning</th><th>Files</th><th class="num">Rows with a value</th><th>Example</th><th>Used?</th><th>Why not (if not used)</th></tr></thead>
+        <tbody>
+          <tr><td><code>Timestamp</code></td><td>minute</td><td>45/45</td><td class="num">100%</td><td>2020-05-02 08:18</td><td>✅</td><td></td></tr>
+          <tr><td><code>Dexcom GL</code></td><td>Dexcom G6 glucose, mg/dL (5-min, filled to 1 min)</td><td>45/45</td><td class="num">91.6%</td><td>101.8</td><td>✅ main glucose</td><td></td></tr>
+          <tr><td><code>HR</code></td><td>Fitbit heart rate, bpm</td><td>45/45</td><td class="num">88.8%</td><td>81</td><td>✅</td><td></td></tr>
+          <tr><td><code>Meal Type</code></td><td>breakfast / lunch / dinner / snack</td><td>45/45</td><td class="num">1,706 rows</td><td>Breakfast</td><td>✅</td><td></td></tr>
+          <tr><td><code>Carbs</code>, <code>Protein</code>, <code>Fat</code>, <code>Fiber</code></td><td>logged nutrients, g</td><td>45/45</td><td class="num">1,706 rows</td><td>66, 22, 10.5, 0</td><td>✅ training and history</td><td>Not used for the day-8 meal itself: there the model sees only the photo</td></tr>
+          <tr><td><code>Image path</code></td><td>photo before the meal, and after it on a later row</td><td>45/45</td><td class="num">3,197 rows</td><td>photos/…-8-18-0.jpg</td><td>✅ before-meal photo</td><td>After-meal photo not used: taken after eating, so not available at prediction time. Judging leftovers from before/after pairs would need a separate model</td></tr>
+          <tr><td><code>Libre GL</code></td><td>FreeStyle Libre Pro glucose, mg/dL (15-min, filled to 1 min)</td><td>45/45</td><td class="num">99.97%</td><td>88.4</td><td>❌</td><td>Second sensor measuring the same thing, sampled less often (15 min) and about 32 mg/dL lower. The challenge specifies 5-min CGM, so Dexcom only</td></tr>
+          <tr><td><code>METs</code></td><td>Fitbit activity intensity ×10 (10 = rest, 30 = walking)</td><td>34/45</td><td class="num">72.9%</td><td>30</td><td>❌</td><td rowspan="4">Activity comes in different forms per person: 34 METs, 11 an intensity level, 1 steps. The first version focused on the meal response, and activity after a meal is not known when predicting. Heart rate already reflects activity before the meal. Planned next</td></tr>
+          <tr><td><code>Intensity</code></td><td>activity level 0–3, instead of METs</td><td>11/45</td><td class="num">22.8%</td><td>1</td><td>❌</td></tr>
+          <tr><td><code>Calories (Activity)</code></td><td>active kcal per minute</td><td>44/45</td><td class="num">94.8%</td><td>3.15</td><td>❌</td></tr>
+          <tr><td><code>Steps</code></td><td>steps, instead of active kcal (participant 007 only)</td><td>1/45</td><td class="num">0.8%</td><td></td><td>❌</td></tr>
+          <tr><td><code>Calories</code></td><td>logged meal kcal</td><td>45/45</td><td class="num">1,706 rows</td><td>448</td><td>❌</td><td>Repeats the nutrients: kcal is computed as 4·carbs + 4·protein + 9·fat. Not available on day 8 either</td></tr>
+          <tr><td><code>Amount Consumed</code></td><td>% of the meal eaten</td><td>43/45</td><td class="num">1,642 rows</td><td>100</td><td>❌</td><td>Inconsistent: 0 on 335 meals and 200–600 on 126, so it cannot be read as a percentage</td></tr>
+          <tr><td><code>Sugar</code></td><td>sugar, g (participant 013 only)</td><td>1/45</td><td class="num">39 rows</td><td></td><td>❌</td><td>Only one person has it</td></tr>
+          <tr><td><code>Unnamed: 0</code>, <code>RecordIndex</code></td><td>row numbers</td><td>9/45, 1/45</td><td class="num"></td><td></td><td>❌</td><td>No information</td></tr>
+          <tr><td><code>bio.csv</code> (24 columns)</td><td>age, sex, BMI, HbA1c, fasting glucose and insulin, lipids, fingersticks</td><td>45/45</td><td class="num">one row per person</td><td>27 y, M, BMI 22.3, HbA1c 5.4%</td><td>⚠️ risk estimates only</td><td>Not used to predict glucose: with 45 people, one fixed value per person lets the model recognize who someone is instead of learning a pattern. The first-week profile reflects each person's response more directly, and app users may not have lab values. Age, sex and BMI are planned next</td></tr>
+          <tr><td><code>gut_health_test.csv</code> (23 columns)</td><td>22 gut-health scores, 1–3</td><td>45/45</td><td class="num">one row per person</td><td>Gut Lining Health 2</td><td>❌</td><td>One measurement per person for 45 people overfits easily, and the app cannot collect it</td></tr>
+          <tr><td><code>microbes.csv</code> (1,980 columns)</td><td>presence of 1,979 bacterial taxa</td><td>45/45</td><td class="num">one row per person</td><td>537 of 1,979 present</td><td>❌</td><td>1,979 features for 45 people overfits. Two profiling batches with different depth. The app cannot collect it</td></tr>
+        </tbody>
+      </table></div>
+
       <h3>What the deployed model reads for one prediction</h3>
       <p>The example values are real: participant 001, lunch on day 8 at 13:26. The logged nutrition of that lunch (40 g carbs, 76 g protein, 17 g fat) is <i>not</i> shown to the model. It sees only the photo.</p>
       <div class="tbl"><table>
