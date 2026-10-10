@@ -279,30 +279,67 @@ figure.arch .lb { fill: var(--muted); font-size: 11.5px; }
     
     <section id="how" aria-labelledby="h-how">
       <div class="sec-head"><span class="sec-num">02</span><h2 id="h-how">How it works</h2></div>
-      <div class="flow">
-        <div class="stage"><h4>Inputs at prediction time</h4>
-          <div class="box"><b>Meal photo</b><span>no nutrition label needed</span></div>
-          <div class="box"><b>CGM, last 2 h</b><span>level, trend, variability</span></div>
-          <div class="box"><b>Heart rate</b><span>vs the person's resting rate</span></div>
-          <div class="box"><b>Medication</b><span>class, dose, timing, insulin on board</span></div>
-          <div class="box"><b>Days 1–7 history</b><span>meals with photos, nutrition and the curves they produced</span></div>
-        </div>
-        <div class="stage"><h4>Understand the meal</h4>
-          <div class="box"><b>MobileCLIP-S2</b><span class="mono">Apple · 36 M image params · frozen</span><span>photo → 512-d embedding</span></div>
-          <div class="box"><b>Zero-shot food tags</b><span>same model, 30 food prompts</span></div>
-          <div class="box"><b>Nutrition estimator</b><span>ridge + population and personal photo retrieval, LightGBM stacker</span></div>
-        </div>
-        <div class="stage"><h4>Predict the response</h4>
-          <div class="box"><b>LightGBM</b><span class="mono">3-seed bag · quantile + conformal</span><span>change at 15–120 min, peak, time to peak, iAUC</span></div>
-          <div class="box"><b>In-context transformer</b><span class="mono">pretrained on {{T1D_EVENTS}} T1D meals</span><span>reads the person's past meal → curve pairs, outputs the whole curve</span></div>
-          <div class="box"><b>Ensemble</b><span>weights and band chosen on days 6–7 only</span></div>
-        </div>
-        <div class="stage"><h4>Outputs</h4>
-          <div class="box"><b>Glucose at 30/60/90/120 min</b><span>plus peak, rise, time to peak, iAUC</span></div>
-          <div class="box"><b>80% range</b><span>calibrated on held-back days</span></div>
-          <div class="box"><b>Reasons</b><span>TreeSHAP factors, similar past meals</span></div>
-          <div class="box"><b>Confidence flags &amp; what-ifs</b><span>plain-language, ready for the UI</span></div>
-        </div>
+      <figure class="fig arch">
+        <div class="scroll"><svg viewBox="0 0 1200 560" role="img" aria-label="Model framework: the photo is encoded and its nutrients estimated; a feature builder turns the photo, CGM, heart rate, time, medication and the first week into 70 features for model A (LightGBM); model B (transformer, pretrained on MetaboNet) reads this meal and up to 30 past meals with their curves; a blend gives the outputs.">
+          <defs><marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+          <g font-size="12.5" fill="currentColor">
+            <text x="115" y="24" text-anchor="middle" class="lb">INPUTS</text><text x="385" y="24" text-anchor="middle" class="lb">UNDERSTAND THE MEAL</text>
+            <text x="705" y="24" text-anchor="middle" class="lb">TWO MODELS</text><text x="955" y="24" text-anchor="middle" class="lb">COMBINE</text><text x="1122" y="24" text-anchor="middle" class="lb">OUTPUTS</text>
+            <rect class="nd" x="20" y="40" width="190" height="52" rx="6"/><text x="115" y="63" text-anchor="middle" font-weight="700">Meal photo</text><text x="115" y="81" text-anchor="middle" class="lb">the only meal input on day 8</text>
+            <rect class="nd" x="20" y="112" width="190" height="52" rx="6"/><text x="115" y="135" text-anchor="middle" font-weight="700">CGM</text><text x="115" y="153" text-anchor="middle" class="lb">last 24 h before the meal</text>
+            <rect class="nd" x="20" y="184" width="190" height="52" rx="6"/><text x="115" y="207" text-anchor="middle" font-weight="700">Heart rate</text><text x="115" y="225" text-anchor="middle" class="lb">last hour vs resting</text>
+            <rect class="nd" x="20" y="256" width="190" height="52" rx="6"/><text x="115" y="279" text-anchor="middle" font-weight="700">Time, earlier meals</text><text x="115" y="297" text-anchor="middle" class="lb">clock, meal type, last meal</text>
+            <rect class="nd" x="20" y="328" width="190" height="52" rx="6"/><text x="115" y="351" text-anchor="middle" font-weight="700">Medication</text><text x="115" y="369" text-anchor="middle" class="lb">class, dose, timing</text>
+            <rect class="nd" x="20" y="420" width="190" height="64" rx="6"/><text x="115" y="444" text-anchor="middle" font-weight="700">Days 1–7 history</text><text x="115" y="462" text-anchor="middle" class="lb">meals, nutrition and the</text><text x="115" y="477" text-anchor="middle" class="lb">2-h curve after each</text>
+            <rect class="nd" x="270" y="40" width="230" height="52" rx="6"/><text x="385" y="63" text-anchor="middle" font-weight="700">Photo encoder</text><text x="385" y="81" text-anchor="middle" class="lb">MobileCLIP-S2 → 512 numbers</text>
+            <rect class="nd" x="270" y="124" width="230" height="52" rx="6"/><text x="385" y="147" text-anchor="middle" font-weight="700">Nutrition estimator</text><text x="385" y="165" text-anchor="middle" class="lb">carbs, protein, fat, fiber, kcal ± SD</text>
+            <rect class="nd" x="270" y="208" width="230" height="176" rx="6"/><text x="385" y="232" text-anchor="middle" font-weight="700">Feature builder: 70 inputs</text>
+            <text x="290" y="256" class="lb">photo  15 (nutrients, 8 image)</text><text x="290" y="274" class="lb">glucose before meal  6</text><text x="290" y="292" class="lb">heart rate  2</text>
+            <text x="290" y="310" class="lb">time, meal type, last meals  10</text><text x="290" y="328" class="lb">medication  19</text><text x="290" y="346" class="lb">first-week profile  12</text><text x="290" y="364" class="lb">similar past meals  6</text>
+            <rect class="nd nd-hot" x="570" y="130" width="270" height="124" rx="8"/><text x="705" y="155" text-anchor="middle" font-weight="700">Model A · LightGBM</text>
+            <text x="705" y="176" text-anchor="middle" class="lb">3 seeds, one model per output</text><text x="705" y="198" text-anchor="middle" class="lb">in: the 70 inputs</text>
+            <text x="705" y="216" text-anchor="middle" class="lb">out: change at 15…120 min, peak rise,</text><text x="705" y="234" text-anchor="middle" class="lb">time to peak, iAUC + each input's share</text>
+            <rect class="nd nd-hot" x="570" y="300" width="270" height="150" rx="8"/><text x="705" y="325" text-anchor="middle" font-weight="700">Model B · Transformer</text>
+            <text x="705" y="346" text-anchor="middle" class="lb">pretrained: MetaboNet, 671k meals</text><text x="705" y="364" text-anchor="middle" class="lb">fine-tuned: CGMacros</text>
+            <text x="705" y="386" text-anchor="middle" class="lb">in: this meal + up to 30 past meals</text><text x="705" y="404" text-anchor="middle" class="lb">with their curves</text>
+            <text x="705" y="426" text-anchor="middle" class="lb">out: 0–120 min curve, 10 / 50 / 90 %</text>
+            <rect class="nd" x="890" y="215" width="130" height="150" rx="6"/><text x="955" y="240" text-anchor="middle" font-weight="700">Blend</text>
+            <text x="955" y="262" text-anchor="middle" class="lb">share of B:</text><text x="955" y="280" text-anchor="middle" class="lb">curve 0.65</text><text x="955" y="298" text-anchor="middle" class="lb">60 min 0.6</text>
+            <text x="955" y="316" text-anchor="middle" class="lb">peak rise 0.3</text><text x="955" y="340" text-anchor="middle" class="lb">peak ≥ every point</text>
+            <rect class="nd" x="1060" y="150" width="125" height="290" rx="6"/>
+            <text x="1122" y="176" text-anchor="middle" class="lb">G30 / 60 / 90 / 120</text><text x="1122" y="202" text-anchor="middle" class="lb">peak, rise</text><text x="1122" y="228" text-anchor="middle" class="lb">time to peak</text>
+            <text x="1122" y="254" text-anchor="middle" class="lb">iAUC</text><text x="1122" y="280" text-anchor="middle" class="lb">curve + 80% band</text><text x="1122" y="306" text-anchor="middle" class="lb">P(peak &gt; 140/180)</text>
+            <text x="1122" y="332" text-anchor="middle" class="lb">reasons</text><text x="1122" y="358" text-anchor="middle" class="lb">what-ifs</text><text x="1122" y="384" text-anchor="middle" class="lb">confidence flags</text>
+            <line class="ln" x1="212" y1="66" x2="268" y2="66" marker-end="url(#ah3)"/>
+            <line class="ln" x1="385" y1="92" x2="385" y2="122" marker-end="url(#ah3)"/>
+            <line class="ln" x1="385" y1="176" x2="385" y2="206" marker-end="url(#ah3)"/>
+            <line class="ln" x1="212" y1="138" x2="268" y2="250" marker-end="url(#ah3)"/>
+            <line class="ln" x1="212" y1="210" x2="268" y2="272" marker-end="url(#ah3)"/>
+            <line class="ln" x1="212" y1="282" x2="268" y2="296" marker-end="url(#ah3)"/>
+            <line class="ln" x1="212" y1="354" x2="268" y2="326" marker-end="url(#ah3)"/>
+            <line class="ln" x1="212" y1="440" x2="268" y2="356" marker-end="url(#ah3)"/>
+            <line class="ln" x1="502" y1="250" x2="568" y2="200" marker-end="url(#ah3)"/><text x="530" y="214" text-anchor="middle" class="lb">70</text>
+            <line class="ln" x1="502" y1="340" x2="568" y2="360" marker-end="url(#ah3)"/>
+            <polyline class="ln" points="212,470 540,470 540,420 568,420" fill="none" marker-end="url(#ah3)"/><text x="380" y="462" text-anchor="middle" class="lb">past meals + their curves</text>
+            <line class="ln" x1="842" y1="200" x2="888" y2="265" marker-end="url(#ah3)"/>
+            <line class="ln" x1="842" y1="380" x2="888" y2="320" marker-end="url(#ah3)"/>
+            <line class="ln" x1="1022" y1="290" x2="1058" y2="290" marker-end="url(#ah3)"/>
+          </g></svg></div>
+        <figcaption><b>Framework.</b> Model A (LightGBM) works from 70 summary inputs per meal. Model B (transformer) reads the person's own earlier meals together with the glucose curve each one produced, so it learns their response from examples. It learned how to do that on 671k MetaboNet meals before being tuned on CGMacros. The blend weights were chosen on held-back days. Personalization enters through the first-week profile, the person's similar past meals and model B's examples.</figcaption>
+      </figure>
+      <div class="cols2">
+        <div class="tbl"><table>
+          <thead><tr><th colspan="2">Model A · LightGBM</th></tr></thead>
+          <tbody>
+            <tr><td><b>In</b></td><td>70 numbers per meal: estimated nutrients and their uncertainty, 8 image features, similarity to other photos (15) · glucose level, trend, variability, 24-h median, 3-h mean (6) · heart rate vs resting (2) · time of day, meal type, minutes since and carbs of the last meal, meals in 6 h (10) · medication: minutes since and 24-h dose of 8 classes, meal bolus, its timing, insulin on board (19) · first-week profile (12) · rise after similar past meals, own and other people's (6)</td></tr>
+            <tr><td><b>Out</b></td><td>Glucose change at 15, 30, …, 120 min; peak rise; time to peak; iAUC. Each with median, 10% and 90%, and each input's contribution to the peak rise</td></tr>
+          </tbody></table></div>
+        <div class="tbl"><table>
+          <thead><tr><th colspan="2">Model B · in-context transformer</th></tr></thead>
+          <tbody>
+            <tr><td><b>In</b></td><td>One token for the new meal: estimated nutrients, meal type, time, glucose and its trend, heart rate, last meal, insulin (when present), the 2 h of CGM before the meal, and the 512-number photo vector. Plus up to 30 tokens for the person's days 1–7 meals: the same fields, their logged nutrients and the 2-h curve each produced</td></tr>
+            <tr><td><b>Out</b></td><td>The glucose change every 5 min from 0 to 120 min (25 points) at 10%, 50% and 90%, which gives the curve and its 80% band</td></tr>
+          </tbody></table></div>
       </div>
       <p>Personalization happens in three places: a profile of the person built from days 1–7 (average rise, rise per 10 g of carbs, glucose level and variability, resting heart rate), retrieval of the person's own past meals that look like the new one together with how they responded, and the transformer, which reads those past meal–curve pairs directly as context. None of these need retraining per person, so a new user is ready as soon as their first week is uploaded.</p>
     </section>
