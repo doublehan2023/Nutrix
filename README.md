@@ -5,7 +5,7 @@ and their first week of data (PMRF model).
 
 ## Deployment architecture
 
-Live on AWS (us-west-2) as one CloudFormation stack (`infra/pmrf.yaml`), deployed with `scripts/deploy.sh`. Request path, security boundaries and release steps: [docs/architecture.md](docs/architecture.md).
+Live on AWS (us-west-2) as one CloudFormation stack (`infra/pmrf.yaml`), deployed with `scripts/deploy.sh`. Person data is on DynamoDB + S3. Request path, security boundaries and release steps: [docs/architecture.md](docs/architecture.md).
 
 ```mermaid
 flowchart LR
@@ -22,10 +22,11 @@ flowchart LR
         subgraph vpc["Default VPC · 2 AZs"]
             link["VPC link"]
             alb["Internal ALB<br/>:80 → health /healthz"]
-            task["ECS Fargate task<br/>FastAPI · 2 vCPU / 4 GB<br/>model v4-20261010 baked in"]
-            efs[("EFS · encrypted<br/>/data: person signals<br/>+ first-week state")]
+            task["ECS Fargate task<br/>FastAPI · 2 vCPU / 4 GB<br/>model v4-20261010 baked in<br/>+ server/ store layer"]
         end
 
+        ddb[("DynamoDB nutrix-people<br/>meta + daily CGM / HR /<br/>meal / med chunks")]
+        state[("S3 nutrix-person-state<br/>first-week state<br/>&lt;person&gt;/*.parquet, npz, json")]
         photos[("S3 nutrix-input-images<br/>photos/&lt;person&gt;/…")]
         models[("S3 nutrix-models<br/>models/&lt;version&gt;/")]
     end
@@ -33,7 +34,8 @@ flowchart LR
     app -- "HTTPS + x-api-key<br/>/v1/people/{id}/…" --> apigw
     app -- "presigned PUT<br/>(photo upload)" --> photos
     apigw --> link --> alb --> task
-    task -- "NFS 2049, IAM auth" --> efs
+    task -- "signals, meta" --> ddb
+    task -- "first-week state" --> state
     task -- "GetObject / PutObject<br/>photos/* only" --> photos
     task --> logs
     secret -. "PMRF_API_KEY at start" .-> task
@@ -53,7 +55,8 @@ flowchart LR
 | `ops/data/` | Dataset sync with S3 and test-photo selection | Deployment |
 | `tests/integration/` | Tests against a running service, incl. unseen hospital meal photos | Deployment |
 | `docs/` | [Deployment architecture](docs/architecture.md), [testing the deployed API](docs/testing_api.md) and notes: AWS account, buckets, model artifacts, decisions | Deployment |
-| `infra/` | CloudFormation stack for the service (API Gateway, ALB, ECS Fargate, EFS) | Deployment |
+| `infra/` | CloudFormation stack for the service (API Gateway, ALB, ECS Fargate, DynamoDB, S3) | Deployment |
+| `server/` | AWS image layer: runs the model service with person data on DynamoDB + S3 (`model/` unchanged) | Deployment |
 | `.github/workflows/` | CI: lint and image build, no AWS access | Deployment |
 
 ## Run the service locally

@@ -39,11 +39,16 @@ Git Bash note: set `MSYS_NO_PATHCONV=1` when passing AWS names that start with `
 | Stack | CloudFormation `pmrf` (`infra/pmrf.yaml`), architecture in `docs/architecture.md` |
 | Image | ECR `pmrf-api:<model version>-<git sha>` |
 | Logs | CloudWatch `/ecs/pmrf` |
+| Person data | DynamoDB `nutrix-people` + S3 `nutrix-person-state` (`server/store.py`) |
 
 Verified 2026-10-10 against the live API: `scripts/test_integration.sh` passed 13/13 API-flow checks and returned the
 same hospital-meal predictions as the local container (~290 ms per prediction).
 
-## S3 buckets
+## Storage
+
+DynamoDB table `nutrix-people` (created by the `pmrf` stack): person meta and daily CGM / HR / meal / med chunks; layout in `docs/architecture.md`.
+
+### S3 buckets
 
 All buckets: block public access, versioning on, SSE-S3 (AES256).
 
@@ -52,6 +57,7 @@ All buckets: block public access, versioning on, SSE-S3 (AES256).
 | `nutrix-data` | `cgmacros/raw/CGMacros/` (3,502 files), `cgmacros/raw/physionet-1.0.0/` (7), `t1d/raw/Type1Diabetes.parquet` | Verified against local `data/` (counts and bytes). Sync with `ops/data/sync_data.sh pull|push`. |
 | `nutrix-models` | `models/<version>/` | Current version `v4-20261010`. |
 | `nutrix-input-images` | `photos/<person_id>/...` (written by the service; prefix fixed in `model/service/storage.py`), `test/hospital-meals/` (5 untouched hospital trays from Wikimedia Commons, licenses in `sources.csv`; same files in `tests/integration/hospital_meals/`) | Meal photos sent to `/predict`. The service hands the app a presigned PUT URL (`/photos/upload-url`) and reads photos by key; set `PMRF_PHOTO_BUCKET=nutrix-input-images`. No versioning (write-once keys); incomplete multipart uploads are aborted after 1 day. |
+| `nutrix-person-state` | `<pid>/hist.parquet`, `arrays.npz`, `profile.json` | First-week person states written by the service (created by the `pmrf` stack). |
 
 ## Model artifacts: `s3://nutrix-models/models/v4-20261010/`
 
@@ -97,6 +103,8 @@ Library versions are pinned in the manifest (lightgbm 4.5.0, torch 2.5.1, open_c
 | Extend the nutrition photo library (e.g. Nutrition5k) and retrain the stacker | Model team, to confirm | Yes |
 
 ## Deployment decisions
+
+- Person data on DynamoDB + S3 instead of EFS (2026-10-10): `server/store.py` replaces the model's file-based `PersonStore` at start-up, so `model/` stays untouched. Signals go to DynamoDB in one item per person, signal and day; first-week states (1–3 MB) go to S3. Switched after the same tests passed with identical predictions. Risk: depends on `PersonStore`'s method names; `scripts/test_integration.sh` catches a break.
 
 - Scope of the deployment role: ends once the API is up (model service reachable through API Gateway). App integration belongs to the app team.
 

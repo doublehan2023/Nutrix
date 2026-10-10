@@ -26,14 +26,16 @@ curl $API/healthz
 PATH="$PWD/.venv/Scripts:$PATH" bash scripts/test_integration.sh $API
 ```
 
-Needs `data/CGMacros` (`./ops/data/sync_data.sh pull`) and numpy, pandas, httpx in `.venv`. It runs:
+Needs `data/CGMacros` (`./ops/data/sync_data.sh pull`), AWS credentials (profile `nutrix`) and numpy, pandas, httpx,
+boto3 in `.venv`. It first deletes the two test users (`ops/data/reset_person.py`), since person data persists in
+DynamoDB + S3 between runs. Then it runs:
 
 1. The model team's end-to-end flow, 13 checks: photo upload → `/history` → `/signals` → `/predict` → `/profile`, plus
    auth and error cases.
 2. The 5 unseen hospital meal photos for CGMacros participant 001 at day 8, 12:30, printed as a table. Full JSON:
    `tests/integration/out/hospital_meals.json`.
 
-Result on 2026-10-10: 13/13 checks passed; about 290 ms per prediction.
+Result on 2026-10-10 (DynamoDB + S3 store): 13/13 checks passed; about 315 ms per prediction.
 
 ## 3. One prediction by hand
 
