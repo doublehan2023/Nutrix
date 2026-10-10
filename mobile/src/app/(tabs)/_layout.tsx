@@ -1,74 +1,26 @@
 import { Tabs } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs';
-import { useEffect, useRef, useState } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { tabs } from '../../../constants/data';
-import { colors, components } from '../../../constants/theme';
+import { components } from '../../../constants/theme';
 
 const tabBar = components.tabBar;
-const animationDuration = 220;
+const activeTabColor = '#2861f5';
+const inactiveTabColor = '#6b7280';
 
 function PatientTabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
-  const [barWidth, setBarWidth] = useState(0);
-  const reduceMotion = useReducedMotion();
-  const indicatorOffset = useSharedValue(0);
-  const hasPositionedIndicator = useRef(false);
-
-  useEffect(() => {
-    if (barWidth === 0) {
-      return;
-    }
-
-    const itemWidth = barWidth / state.routes.length;
-    const nextOffset = state.index * itemWidth + (itemWidth - tabBar.iconFrame) / 2;
-
-    const shouldAnimate = hasPositionedIndicator.current && !reduceMotion;
-    indicatorOffset.value = shouldAnimate
-      ? withTiming(nextOffset, {
-          duration: animationDuration,
-          easing: Easing.out(Easing.cubic),
-        })
-      : nextOffset;
-    hasPositionedIndicator.current = true;
-  }, [barWidth, indicatorOffset, reduceMotion, state.index, state.routes.length]);
-
-  const animatedPillStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: indicatorOffset.value }],
-  }));
-
   return (
     <View
-      onLayout={({ nativeEvent }) => setBarWidth(nativeEvent.layout.width)}
       style={[
         styles.tabBar,
         {
-          bottom: Math.max(insets.bottom, tabBar.horizontalInset),
-          height: tabBar.height,
-          borderRadius: tabBar.radius,
-          backgroundColor: colors.primary,
+          height: tabBar.height + insets.bottom,
+          paddingBottom: insets.bottom,
         },
       ]}>
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.activePill,
-          {
-            width: tabBar.iconFrame,
-            height: tabBar.iconFrame,
-            borderRadius: tabBar.iconFrame / 2,
-            backgroundColor: colors.accent,
-          },
-          animatedPillStyle,
-        ]}
-      />
       {state.routes.map((route, index) => {
         const tab = tabs.find((item) => item.name === route.name);
 
@@ -101,7 +53,14 @@ function PatientTabBar({ state, descriptors, navigation, insets }: BottomTabBarP
             onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
             onPress={onPress}
             style={styles.tabButton}>
-            <Image source={tab.icon} resizeMode="contain" style={styles.tabIcon} />
+            <Image
+              source={tab.icon}
+              resizeMode="contain"
+              style={[styles.tabIcon, { tintColor: isFocused ? activeTabColor : inactiveTabColor }]}
+            />
+            <Text style={[styles.tabLabel, { color: isFocused ? activeTabColor : inactiveTabColor }]}>
+              {tab.title}
+            </Text>
           </Pressable>
         );
       })}
@@ -111,6 +70,7 @@ function PatientTabBar({ state, descriptors, navigation, insets }: BottomTabBarP
 
 export default function PatientTabsLayout() {
   const reduceMotion = useReducedMotion();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -119,6 +79,7 @@ export default function PatientTabsLayout() {
         headerShown: false,
         tabBarShowLabel: false,
         animation: reduceMotion ? 'none' : 'fade',
+        sceneStyle: { paddingBottom: tabBar.height + insets.bottom },
       }}>
       {tabs.map((tab) => (
         <Tabs.Screen
@@ -136,25 +97,34 @@ export default function PatientTabsLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
-    left: tabBar.horizontalInset,
-    right: tabBar.horizontalInset,
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    overflow: 'hidden',
-    elevation: 0,
-  },
-  activePill: {
-    position: 'absolute',
-    top: (tabBar.height - tabBar.iconFrame) / 2,
+    backgroundColor: '#ffffff',
+    borderTopColor: '#e5e7eb',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    elevation: 8,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
   },
   tabButton: {
     flex: 1,
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingTop: 6,
   },
   tabIcon: {
-    width: 24,
-    height: 24,
+    width: tabBar.iconSize,
+    height: tabBar.iconSize,
+  },
+  tabLabel: {
+    marginTop: tabBar.labelTopMargin,
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
