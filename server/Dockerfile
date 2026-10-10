@@ -1,0 +1,7 @@
+# AWS image: the model team's image (model/deploy/Dockerfile) plus server/, which keeps person data on DynamoDB + S3.
+# Build from the repo root:  docker build -f server/Dockerfile --build-arg BASE_IMAGE=pmrf-api:<version> -t pmrf-aws:<tag> .
+ARG BASE_IMAGE=pmrf-api:v4-20261010
+FROM ${BASE_IMAGE}
+
+COPY server/ /app/server/
+CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1", "--timeout-keep-alive", "75"]
