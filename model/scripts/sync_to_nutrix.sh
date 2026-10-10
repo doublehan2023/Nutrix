@@ -14,3 +14,9 @@ rsync -a --delete --prune-empty-dirs \
   --exclude '*' ./ "$DST/"
 cp deploy/gitignore.model "$DST/.gitignore"
 echo "synced to $DST"
+# UI showcase package (12 meals, photos + API JSON; CGMacros CC BY-NC-SA, attribution in its README) - approved for the public repo 2026-10-10
+if [ -d results/best_subjects/ui_package ]; then
+  rsync -a --delete results/best_subjects/ui_package/ "$DST/ui_showcase/"
+  cp docs/ui_showcase_README.md "$DST/ui_showcase/README.md"
+  echo "ui_showcase synced"
+fi
