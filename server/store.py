@@ -89,6 +89,16 @@ class DynamoPersonStore(PersonStore):
             return pd.DataFrame(columns=SIGNAL_COLUMNS[kind])
         return pd.concat(parts, ignore_index=True).sort_values(SIGNAL_KEYS[kind]).reset_index(drop=True)
 
+    def signal_day(self, pid, kind, date):
+        """one calendar day (YYYY-MM-DD, the person's wall-clock time) of one signal kind: a single DynamoDB item"""
+        item = self.table.get_item(Key=dict(pid=check_pid(pid), sk=f"sig#{kind}#{date}")).get("Item")
+        df = self._frame(item) if item else pd.DataFrame(columns=SIGNAL_COLUMNS[kind])
+        return df.reindex(columns=SIGNAL_COLUMNS[kind])
+
+    def signal_dates(self, pid, kind):
+        """{date: row count} of the stored day chunks of one signal kind (keys and counts only, no data read)"""
+        return {it["sk"].rsplit("#", 1)[1]: int(it["n"]) for it in self._chunks(pid, kind, attrs=["sk", "n"])}
+
     def append_signal(self, pid, kind, df, replace=False):
         """append rows (deduplicated on the timestamp; a new row replaces an old one at the same time)"""
         df = df.reindex(columns=SIGNAL_COLUMNS[kind])

@@ -1,6 +1,7 @@
 # Testing the deployed API
 
-Run from the repo root in Git Bash. Field reference: `model/docs/api_contract.md`. Architecture: `docs/architecture.md`.
+Run from the repo root in Git Bash. Endpoints, request bodies and errors: [api.md](api.md). Architecture:
+[architecture.md](architecture.md).
 
 ## 0. Setup
 
@@ -12,8 +13,9 @@ export PMRF_API_KEY=$(aws secretsmanager get-secret-value --secret-id pmrf/api-k
 
 `aws: command not found` in Git Bash: the shell was opened before the AWS CLI was installed. Run
 `export PATH="/c/Program Files/Amazon/AWSCLIV2:$PATH"` (add it to `~/.bashrc` to keep it).
-`ExpiredToken` means the event credentials expired: refresh them from the Workshop Studio page (see
-`docs/deployment_notes.md`) and run the export again.
+`ExpiredToken` means the event credentials expired: copy new ones from the Workshop Studio event page ("Get AWS CLI
+credentials") into the `nutrix` profile with `aws configure set aws_access_key_id|aws_secret_access_key|aws_session_token
+... --profile nutrix`, then run the export again.
 
 ## 1. Health check (no key needed)
 
@@ -132,6 +134,19 @@ What to look at in the prediction:
 `demo-hospital-001` and `flowtest-user` are test users that `scripts/test_integration.sh` deletes and rebuilds on every
 run; use the patients in section 4 for demos.
 
+### History screen
+
+```bash
+# dates with data, oldest first, each with a glucose summary and meal / medication counts
+curl -s -H "x-api-key: $PMRF_API_KEY" $API/v1/people/cgmacros-003/history/days | python -m json.tool
+# one day: 5-min CGM and heart rate, meals with photo URL and observed response, medication
+curl -s -H "x-api-key: $PMRF_API_KEY" $API/v1/people/cgmacros-003/history/days/2020-03-12 | python -m json.tool
+```
+
+Fields: [api.md](api.md#get-historydays). Checked on 2026-10-10 against `cgmacros-003`: 11 dates, the first 7 in the
+history window; 2020-03-12 returns 288 CGM and 288 heart-rate points (30 KB), three first-week meals with observed
+responses, and each `photo_url` downloads the JPEG.
+
 ## 4. Onboarded patients
 
 Six CGMacros participants are stored as patients, two per group, with week 1 as history and all later CGM, heart
@@ -180,11 +195,4 @@ A new person needs a first week of data before `/predict` works:
 
 ## 6. Errors
 
-| Status | Meaning |
-| --- | --- |
-| 401 | Missing or wrong `x-api-key` |
-| 404 | Person not onboarded yet (no `/history`), or the photo key does not exist |
-| 409 | No CGM reading in the 30 min before the meal: send `/signals` or `recent_cgm` |
-| 422 | Invalid request: not an image, values out of range, wrong types |
-| 429 | Throttled: API Gateway allows 10 requests/s (burst 20) |
-| 503 / 504 | Service starting or overloaded: check CloudWatch logs `/ecs/pmrf` |
+Status codes and their meaning: [api.md](api.md#errors).
