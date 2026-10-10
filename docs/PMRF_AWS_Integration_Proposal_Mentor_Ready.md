@@ -61,154 +61,111 @@ existing PMRF prediction model with an LLM**.
 
 ------------------------------------------------------------------------
 
-## 2. Proposed AWS Architecture
+## 2. Current Implementation Status from PR #2
 
-``` text
-                    Predict My Glucose
+PR #2 (`feature/model` → `main`) materially changes the AWS discussion: the PMRF core is no longer only a research model. The branch now includes a **CPU-only FastAPI prediction service, Docker image, versioned model store, AWS deployment guide, API contract, S3 integration, and acceptance tests**.
 
-                         User / Web App
-                               |
-                  Meal photo + recent context
-                               |
-                               v
-                       Amazon API Gateway
-                               |
-                               v
-                       Lambda / Backend API
-                               |
-             +-----------------+-----------------+
-             |                 |                 |
-             v                 v                 v
-       Meal Images       Personal History     Recent Data
-       Amazon S3          S3 / Database       CGM / HR
-             |                 |                 |
-             +-----------------+-----------------+
-                               |
-                               v
-                       PMRF Prediction API
-                    ECS / SageMaker Endpoint
-                               |
-              +----------------+----------------+
-              |                |                |
-              v                v                v
-         MobileCLIP         LightGBM       Transformer
-        Meal Features      Personalized      Time Series
-                              Model
-              +----------------+----------------+
-                               |
-                               v
-                    Personalized Prediction
-                  Curve / Peak / iAUC / Range
-                               |
-                  +------------+------------+
-                  |                         |
-                  v                         v
-           Amazon Bedrock             SHAP + Similar
-          Explanation Layer             Meals
-                  |                         |
-                  +------------+------------+
-                               |
-                               v
-                    Bedrock Guardrails
-                               |
-                               v
-                     Patient-Facing UI
-               Prediction + Why + What-if
-```
+### Current model / service facts
+
+- **Model version:** `v4-20261010`
+- **Runtime:** CPU-only FastAPI container
+- **Target task size:** 2 vCPU / 4 GB
+- **Memory:** about 1.0 GB in load testing
+- **First-week personalization state build:** about 2–3 seconds
+- **No per-user LightGBM retraining:** `/history` builds a first-week state containing history meals, photo embeddings, personal profile features, and the user's labeled-photo retrieval library; inference then uses that state.
+- **Model store:** 115 files, 466 MB, stored in encrypted/private/versioned S3 under `s3://nutrix-models/models/v4-20261010/`
+
+### Validation and load-test evidence
+
+- **44 people / 402 day-8+ meals:** unseen-meal peak-rise error = **19.8 mg/dL**
+- **Golden test:** 176 / 176 predictions matched the technical-report outputs
+- **End-to-end API flow:** 13 / 13 checks passed
+- **S3 photo + model-download tests:** passed
+- **Single client:** median latency **252 ms**, p99 **374 ms**, about **3.8 predictions/s**
+- **Four clients:** same overall throughput, median latency about **1.2 s**
+- **Container startup:** about **3 s**
+
+This means the mentor meeting should focus less on "how do we host the model at all?" and more on whether the current AWS pattern is the right level of complexity for the hackathon and how to add the strongest explainability layer next.
 
 ------------------------------------------------------------------------
 
-## 3. AWS Components
+## 3. Current AWS Deployment Architecture
 
-### A. Amazon S3 --- Multimodal Data Storage
-
-S3 can store:
-
--   Meal photos
--   CGM time-series files
--   Heart-rate data
--   Medication history
--   User history from Days 1--7
--   Model outputs and artifacts
-
-Example structure:
+The deployment guide in PR #2 specifies the following path:
 
 ``` text
-s3://predict-my-glucose/
-|
-+-- users/
-    +-- 001/
-        +-- history/
-        |   +-- cgm.csv
-        |   +-- heart_rate.csv
-        |   +-- medication.csv
-        |
-        +-- meals/
-            +-- day1/
-            +-- day2/
-            +-- ...
-            +-- day8/
+App
+  |
+  | HTTPS
+  v
+API Gateway (HTTP API)
+  |
+  | Cognito JWT authorizer
+  v
+VPC Link -> ALB
+  |
+  v
+ECS Fargate
+  |
+  v
+PMRF FastAPI Service
 ```
 
-This maps naturally to the current PMRF workflow.
-
-------------------------------------------------------------------------
-
-### B. API Gateway + Backend
-
-Our technical design already defines three useful application endpoints:
+Supporting AWS services:
 
 ``` text
-POST /v1/people/{id}/history
-POST /v1/people/{id}/predict
-GET  /v1/people/{id}/profile
-```
-
-Possible AWS implementation:
-
-``` text
-Web App
+Meal photos
    |
-   v
-API Gateway
+   +--> Presigned S3 uploads
+
+Per-person signals + first-week state
    |
-   v
-Lambda / FastAPI Backend
+   +--> Amazon EFS mounted at /data
+
+Model versions
    |
-   v
-PMRF Prediction Service
+   +--> Amazon S3 -> rolling ECS deployment
+
+Operational telemetry
+   |
+   +--> CloudWatch request logs
 ```
 
-`/history` uploads the first-week data and builds the user's personalization context; `/predict` generates the personalized meal-response prediction; and `/profile` returns the personalized metabolic profile and diet insights. **The current PMRF design does not require training a new LightGBM model for each user.** Personalization comes from the first-week profile, retrieval of similar personal meals, and the transformer's in-context use of prior meal-response pairs. This makes deployment closer to inference + feature/profile preparation than to per-user model training.
+### Concrete deployment configuration
 
-------------------------------------------------------------------------
+- **ECS Fargate:** Linux x86_64, 2 vCPU, 4 GB, port 8080, one uvicorn worker per task
+- **API Gateway:** `/v1/*` and `/healthz`; Cognito JWT authorizer; first-week upload is roughly 1–2 MB
+- **S3:** presigned meal-photo uploads; encryption enabled; public access blocked; model versions can also be loaded from S3
+- **EFS:** per-person raw signals and first-week state, roughly 1–3 MB per person, encrypted at rest
+- **CloudWatch:** one JSON request log per call containing method, route, status, and latency; the service does **not** log glucose values or meal photos
+- **Scaling:** target CPU 60%; one task serves roughly 3.5–3.8 predictions/s
 
-### C. PMRF Model Hosting --- ECS or SageMaker
-
-The existing PMRF predictor should remain the core prediction engine.
-
-Possible deployment:
+### App flow already defined by the API
 
 ``` text
-PMRF Python Model
-      |
-      v
-Docker Container
-      |
-      v
-Amazon ECR
-      |
-      v
-ECS / Fargate
-      OR
-SageMaker Endpoint
+1. Upload meal photo -> presigned S3 PUT
+2. POST /history -> build first-week personalization state (~2–3 s)
+3. POST /signals -> append newer CGM / HR / meals / meds
+4. POST /predict -> return prediction + explanations + what-if scenarios
+5. GET /profile -> return personalization, diet guide, and metabolic profile
 ```
 
-For a hackathon MVP, **ECS/Fargate or a simple containerized API may be sufficient**. The current prototype can run inference on CPU, so a GPU should not be required for the core PMRF path. SageMaker becomes more useful if we want managed model endpoints, model monitoring, or a more complete MLOps story. A key mentor question is whether the operational value of SageMaker justifies the added setup for a short hackathon.
+### Privacy / security already represented in the deployment design
 
-### D. Privacy and Data Minimization
+- Authenticated API path through Cognito / API Gateway
+- Encryption at rest for S3 and EFS
+- TLS at API Gateway
+- Pseudonymous person IDs recommended instead of names/emails
+- Non-root container and input validation
+- CloudWatch logs exclude glucose values and photos
+- If real users' health data is later processed, the deployment guide recommends using HIPAA-eligible services and an AWS BAA
 
-For the hackathon, use only synthetic or publicly available de-identified data. Encrypt objects stored in S3, use authenticated API access, and minimize what is sent to the generative layer. Where possible, Bedrock should receive **structured PMRF outputs, derived features, and retrieved evidence rather than raw longitudinal health records or raw meal images**. This keeps the LLM focused on explanation while reducing unnecessary exposure of sensitive data.
+### Important implementation limits
+
+- Predictions require a CGM reading within 30 minutes before the meal
+- The diet guide is fully personal only when standardized first-week test meals are available; otherwise the service falls back to group-average intervention effects
+- Person data is currently file-based on EFS; high write concurrency per person may eventually justify DynamoDB or another managed store
+- The current model was developed on CGMacros; it should be retrained on the official challenge dataset when available
 
 ------------------------------------------------------------------------
 
@@ -488,7 +445,7 @@ Good Kiro tasks for our project could include:
 
 ------------------------------------------------------------------------
 
-## 9. Recommended Hackathon MVP
+## 9. Recommended Hackathon MVP from the Current PR #2 Baseline
 
 We should avoid adding AWS services only for the sake of having more AWS
 logos.
@@ -521,9 +478,7 @@ The first version can stay relatively simple:
 
 ### Implementation Priority
 
-**Priority 1 --- Core** 1. Store meal photos/data in S3 2. Wrap the
-existing PMRF predictor as an API 3. Connect the frontend to the
-prediction API
+**Priority 1 --- Finish the current service path** 1. Confirm the PR #2 FastAPI service works in the HealthHack AWS environment 2. Connect the frontend to presigned S3 uploads and `/predict` 3. Show the prediction curve, 80% band, explanation factors, and profile data
 
 **Priority 2 --- Explainability & Responsible AI** 4. Add Bedrock-generated explanations **together with Bedrock Guardrails** 5. Add a small curated medical knowledge base for evidence-grounded interpretation 6. Add citations and an evidence-support / grounding signal
 
@@ -652,8 +607,8 @@ Production-Ready Application
 
 ## Proposed Next Step
 
-For the first AWS implementation sprint, focus on:
+For the next implementation sprint, the PMRF service and AWS deployment path already exist in PR #2. Focus on:
 
-**S3 + PMRF Prediction API + Bedrock Explanation + Bedrock Guardrails**
+**Frontend integration with the PR #2 API + Bedrock Explanation + Bedrock Guardrails**
 
-Once that end-to-end flow works, add a **small curated medical Knowledge Base / RAG layer** for grounded interpretation and citations. Broader conversational RAG remains optional. GI/GL should remain explanation-only for the hackathon and can be cut before the medical RAG if scope becomes tight. SageMaker/MLOps and more advanced agent functionality are later extensions.
+Once the PR #2 predictor is running end-to-end with the frontend, add a **small curated medical Knowledge Base / RAG layer** for grounded interpretation and citations. Broader conversational RAG remains optional. GI/GL should remain explanation-only for the hackathon and can be cut before the medical RAG if scope becomes tight. SageMaker/MLOps and more advanced agent functionality are later extensions.
