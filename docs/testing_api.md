@@ -132,6 +132,29 @@ What to look at in the prediction:
 `demo-hospital-001` and `flowtest-user` are test users that `scripts/test_integration.sh` deletes and rebuilds on every
 run; use the patients in section 4 for demos.
 
+### History screen
+
+Two read-only calls serve the stored data per calendar day (the person's wall-clock time), added by
+`server/history_view.py`:
+
+```bash
+# dates with data, oldest first, each with a glucose summary and meal / medication counts
+curl -s -H "x-api-key: $PMRF_API_KEY" $API/v1/people/cgmacros-003/history/days | python -m json.tool
+# one day (about 30 KB)
+curl -s -H "x-api-key: $PMRF_API_KEY" $API/v1/people/cgmacros-003/history/days/2020-03-18 | python -m json.tool
+```
+
+| Field | Meaning |
+| --- | --- |
+| `history_window` | The model's first week: `start` (t0 from `/history`), `end`, `days`. It usually starts mid-day, so each date and meal also has `in_history_window` |
+| `days[]` | `date`, `cgm_readings`, `mean_glucose_mgdl`, `min_glucose_mgdl`, `max_glucose_mgdl`, `time_in_range_pct` (70–180 mg/dL), `hr_readings`, `meals`, `meds` |
+| `cgm[]` | Stored readings `{t, mgdl}` |
+| `hr[]` | Heart rate averaged per 5 minutes `{t, bpm}` |
+| `meals[]` | `time`, `meal_type`, nutrition (`carbs_g` …, logged or estimated), `source` (`history`, `logged`, `predicted`), `photo_key`, `photo_url` (presigned GET, valid 1 h), `observed` (same fields as in `/predict`, or null without enough CGM) |
+| `meds[]` | `time`, `med_class`, `dose` |
+
+A date without any stored data returns 404, a malformed date 422.
+
 ## 4. Onboarded patients
 
 Six CGMacros participants are stored as patients, two per group, with week 1 as history and all later CGM, heart
