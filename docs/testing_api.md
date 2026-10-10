@@ -77,22 +77,14 @@ confidence  high
 - The API key is read from Secrets Manager unless `PMRF_API_KEY` is set. Errors print the service's reason.
   Full JSON: `tests/integration/out/predict_<patient>.json`.
 
-The same call with curl: cgmacros-003's real day-8 lunch. Its photo is already in S3; the key changes whenever the
-patient is onboarded again, so take it (and the meal time) from `tests/integration/day8_meals.csv`:
+The same call with curl (the photo is already in S3, so no upload):
 
 ```bash
-# predict: photo key and meal time of cgmacros-003's day-8 lunch
-read -r KEY TIME < <(awk -F, '$1=="cgmacros-003" && $5=="lunch" {print $6, $4; exit}' tests/integration/day8_meals.csv)
+# predict: cgmacros-003's real day-8 lunch (photo key and time from tests/integration/day8_meals.csv;
+# the key changes when the patient is onboarded again)
 curl -s -H "x-api-key: $PMRF_API_KEY" -H "content-type: application/json" \
-  -d "{\"photo_key\":\"$KEY\",\"meal_time\":\"$TIME\",\"log_meal\":false}" \
-  $API/v1/people/cgmacros-003/predict > out.json
-
-# predicted vs observed, side by side
-python -c "
-import json; d = json.load(open('out.json')); p, o = d['prediction'], d['observed']
-for k in ('30', '60', '90', '120'): print(f'glucose at {k:>3} min   {p[\"glucose_at_min\"][k]:6.0f} {o[\"glucose_at_min\"][k]:6.0f}')
-for k in ('peak_glucose_mgdl', 'peak_rise_mgdl', 'time_to_peak_min', 'iauc_0_120_mgdl_min'): print(f'{k:<20} {p[k]:6.0f} {o[k]:6.0f}')
-"
+  -d '{"photo_key":"photos/cgmacros-003/748bcafa1a7b460697ce9157b30f3e73.jpg","meal_time":"2020-03-18T13:34:00","log_meal":false}' \
+  $API/v1/people/cgmacros-003/predict | python -m json.tool
 
 # profile
 curl -s -H "x-api-key: $PMRF_API_KEY" $API/v1/people/cgmacros-003/profile | python -m json.tool
