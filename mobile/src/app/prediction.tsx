@@ -1,11 +1,12 @@
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MetricCard } from '@/components/prediction/metric-card';
 import { PredictionChart } from '@/components/prediction/prediction-chart';
 import { PredictionDrivers } from '@/components/prediction/prediction-drivers';
 import { PredictionHeader } from '@/components/prediction/prediction-header';
+import { useMealDraft } from '@/features/meals/meal-draft-context';
 
 const chartData = {
   observed: [106, 115, 134, 149, 153, 143, 126, 116, 110],
@@ -32,6 +33,12 @@ const drivers = [
 
 export default function PredictionScreen() {
   const router = useRouter();
+  const { discardDraft } = useMealDraft();
+
+  function returnHome() {
+    discardDraft();
+    router.replace('/(tabs)');
+  }
 
   return (
     <SafeAreaView className="app-screen" edges={['top']}>
@@ -69,6 +76,9 @@ export default function PredictionScreen() {
         <Text className="mt-5 text-center text-xs leading-5 text-copy">
           This is a demonstration estimate and not medical advice.
         </Text>
+        <Pressable accessibilityRole="button" className="app-button-primary mt-5" onPress={returnHome}>
+          <Text className="text-lg font-bold text-on-brand">Go back to home page</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
