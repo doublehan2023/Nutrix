@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { useSignIn } from '@clerk/expo';
 
 import { AuthHeader, AuthScreen, ErrorMessage, Field, PrimaryButton, TextButton } from '@/components/auth/auth-ui';
-import { useAuth } from '@/auth/auth-provider';
+import { messageForClerkError } from '@/auth/clerk-error';
 
 export default function ForgotPasswordScreen() {
-  const { requestPasswordReset } = useAuth();
+  const { signIn, fetchStatus } = useSignIn();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,7 +19,16 @@ export default function ForgotPasswordScreen() {
     }
     setIsSubmitting(true);
     try {
-      await requestPasswordReset(email);
+      const { error: createFailure } = await signIn.create({ identifier: email.trim().toLowerCase() });
+      if (createFailure) {
+        setError(messageForClerkError(createFailure));
+        return;
+      }
+      const { error: sendCodeFailure } = await signIn.resetPasswordEmailCode.sendCode();
+      if (sendCodeFailure) {
+        setError(messageForClerkError(sendCodeFailure));
+        return;
+      }
       router.push({ pathname: '/(auth)/reset-password', params: { email } });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'We could not start password recovery.');
@@ -32,7 +42,7 @@ export default function ForgotPasswordScreen() {
       <AuthHeader title="Reset your password" subtitle="We will email you a code to create a new password." />
       <ErrorMessage message={error} />
       <Field label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoComplete="email" textContentType="emailAddress" placeholder="you@example.com" returnKeyType="done" onSubmitEditing={submit} />
-      <PrimaryButton label="Email reset code" onPress={submit} disabled={isSubmitting} />
+      <PrimaryButton label="Email reset code" onPress={submit} disabled={isSubmitting || fetchStatus === 'fetching'} />
       <TextButton label="Back to sign in" onPress={() => router.back()} />
     </AuthScreen>
   );

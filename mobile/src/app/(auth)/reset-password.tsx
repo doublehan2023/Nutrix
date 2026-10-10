@@ -1,13 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
+import { useSignIn } from '@clerk/expo';
 
 import { AuthHeader, AuthScreen, ErrorMessage, Field, PrimaryButton, TextButton } from '@/components/auth/auth-ui';
-import { useAuth } from '@/auth/auth-provider';
+import { messageForClerkError } from '@/auth/clerk-error';
 
 export default function ResetPasswordScreen() {
   const { email: rawEmail } = useLocalSearchParams<{ email?: string }>();
   const email = Array.isArray(rawEmail) ? rawEmail[0] : rawEmail ?? '';
-  const { setNewPassword, requestPasswordReset } = useAuth();
+  const { signIn, fetchStatus } = useSignIn();
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -27,8 +28,25 @@ export default function ResetPasswordScreen() {
     }
     setIsSubmitting(true);
     try {
-      await setNewPassword(email, code, password);
-      router.replace('/(auth)/sign-in');
+      if (signIn.status !== 'needs_new_password') {
+        const { error: verificationFailure } = await signIn.resetPasswordEmailCode.verifyCode({ code: code.trim() });
+        if (verificationFailure) {
+          setError(messageForClerkError(verificationFailure));
+          return;
+        }
+      }
+      const { error: resetFailure } = await signIn.resetPasswordEmailCode.submitPassword({
+        password,
+        signOutOfOtherSessions: true,
+      });
+      if (resetFailure) {
+        setError(messageForClerkError(resetFailure));
+        return;
+      }
+      if (signIn.status === 'complete') {
+        const { error: finalizeFailure } = await signIn.finalize({ navigate: () => router.replace('/') });
+        if (finalizeFailure) setError(messageForClerkError(finalizeFailure));
+      }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'We could not reset your password.');
     } finally {
@@ -40,7 +58,11 @@ export default function ResetPasswordScreen() {
     setError(undefined);
     setNotice(undefined);
     try {
-      await requestPasswordReset(email);
+      const { error: sendCodeFailure } = await signIn.resetPasswordEmailCode.sendCode();
+      if (sendCodeFailure) {
+        setError(messageForClerkError(sendCodeFailure));
+        return;
+      }
       setNotice('A new reset code has been sent.');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'We could not send another code.');
@@ -54,7 +76,7 @@ export default function ResetPasswordScreen() {
       <Field label="Reset code" value={code} onChangeText={setCode} keyboardType="number-pad" autoComplete="one-time-code" placeholder="123456" returnKeyType="next" />
       <Field label="New password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" textContentType="newPassword" placeholder="Create a secure password" returnKeyType="next" />
       <Field label="Confirm new password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry autoComplete="new-password" textContentType="newPassword" placeholder="Re-enter your password" returnKeyType="done" onSubmitEditing={submit} />
-      <PrimaryButton label="Reset password" onPress={submit} disabled={isSubmitting} />
+      <PrimaryButton label="Reset password" onPress={submit} disabled={isSubmitting || fetchStatus === 'fetching'} />
       <TextButton label="Send a new reset code" onPress={resend} />
     </AuthScreen>
   );

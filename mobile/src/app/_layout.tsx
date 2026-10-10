@@ -4,7 +4,14 @@ import * as SplashScreen from 'expo-splash-screen';
 import '@/global.css';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/auth/auth-provider';
-import '@/lib/amplify';
+import { ClerkProvider } from '@clerk/expo';
+import { tokenCache } from '@clerk/expo/token-cache';
+
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
+
+if (!publishableKey) {
+  throw new Error('Add EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY to mobile/.env.');
+}
 
 SplashScreen.preventAutoHideAsync();
 
@@ -29,8 +36,10 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RootNavigator />
-    </AuthProvider>
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+      <AuthProvider>
+        <RootNavigator />
+      </AuthProvider>
+    </ClerkProvider>
   );
 }

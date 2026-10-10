@@ -5,8 +5,8 @@ module.exports = defineConfig([
   expoConfig,
   {
     rules: {
-      // Session restoration is intentionally asynchronous and must update the
-      // provider when the Cognito read completes.
+      // Role-tab mismatch handling deliberately signs out after Clerk restores
+      // the current session and loads the trusted staff metadata.
       'react-hooks/set-state-in-effect': 'off',
     },
   },

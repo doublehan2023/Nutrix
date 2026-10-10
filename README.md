@@ -1,29 +1,48 @@
-# nutrix
-Rutgers Health Hack 2026
+# Nutrix
 
-## Authentication and staff access
+Rutgers Health Hack 2026.
 
-The Expo application in `mobile/` uses Amplify Gen 2 and Amazon Cognito for Nutrix authentication. It has three mutually exclusive roles:
+## Authentication
 
-- `Patients` — users register themselves in the mobile app and are assigned to this group after they verify their email.
-- `Clinicians` — invite-only accounts created by the Nutrix team.
-- `Admins` — invite-only accounts for the Nutrix team.
+The Expo app in `mobile/` uses Clerk for email/password authentication and has three exclusive portal roles:
 
-### Run a development backend
+- `Patient` — public, self-service email/password registration.
+- `Clinician` — invite-only account created by the Nutrix team.
+- `Admin` — invite-only account created by the Nutrix team.
 
-From `mobile/`, authenticate the AWS CLI to the development account, then start the personal sandbox:
+The Admin / Clinician / Patient selector is a portal check, not a way to choose access. An account that signs in through a different portal is immediately signed out and shown an authorization error.
 
-```bash
-npx ampx sandbox
-```
+### Mobile setup
 
-This provisions Cognito and writes `amplify_outputs.json`, which is intentionally ignored by Git because it is environment-specific. Restart Expo after the file is written.
+1. In the Clerk Dashboard, enable **Native API** under **Native applications**.
+2. Under **User & authentication**, enable **Email address**, **Password**, email-code verification, and first-name collection. First name is Nutrix's required display name.
+3. Create `mobile/.env` locally (it is ignored by Git):
+
+   ```env
+   EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+   ```
+
+4. Start the app:
+
+   ```bash
+   cd mobile
+   npm ci
+   npx expo start
+   ```
+
+Only the Clerk publishable key belongs in the Expo app. Never put `CLERK_SECRET_KEY` in a mobile build, an `.env` file that is committed, or any client-side code.
 
 ### Provision an Admin or Clinician
 
-1. Open the generated Cognito user pool in the AWS Console (or Amplify Console user management).
-2. Create the user with their work email and require a password change at first sign-in.
-3. Add the user to exactly one group: `Admins` or `Clinicians`. Do not add staff accounts to `Patients`.
-4. Have the user use the matching Admin or Clinician role tab in Nutrix. A credential accepted under a different role tab is rejected and signed out.
+Before giving a staff member access:
 
-The team must keep groups mutually exclusive. Group claims in the Cognito access token are the source of truth for authorization; the selected role tab only verifies that the user entered the intended portal.
+1. Create or invite their Clerk user from a trusted team process.
+2. Set `publicMetadata.role` to exactly `admin` or `clinician` using the Clerk Dashboard/Backend API. Never allow the mobile client to write this value.
+3. Verify the user can only enter through the matching Nutrix portal tab.
+4. Configure Clerk's session-token customization to add the role claim used by the AWS API. The AWS service must verify the Clerk JWT and authorize its role claim; it must not trust a role sent in a request body.
+
+Publicly registered users have no staff role and are treated as `Patient`. That default is safe only while public registration remains patient-only.
+
+## AWS ML pipeline
+
+The ML pipeline can stay in AWS independently of Clerk. The Expo app sends the Clerk session token as `Authorization: Bearer <token>` to the AWS API. API Gateway/Lambda must verify its JWT signature, issuer, audience/authorized party, expiry, and role claim before invoking a pipeline or accessing data.

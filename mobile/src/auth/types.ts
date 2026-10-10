@@ -8,13 +8,17 @@ export type AuthenticatedUser = {
   role: Role;
 };
 
-export const roleGroup: Record<Role, string> = {
-  Admin: 'Admins',
-  Clinician: 'Clinicians',
-  Patient: 'Patients',
-};
+/**
+ * Staff roles are written to Clerk public metadata by a trusted admin process.
+ * Accounts without a staff role are patients: public registration is patient-only.
+ */
+export function roleFromMetadata(metadata: unknown): Role {
+  const role =
+    typeof metadata === 'object' && metadata && 'role' in metadata
+      ? String(metadata.role).toLowerCase()
+      : '';
 
-export function roleFromGroups(groups: readonly string[]): Role | null {
-  const matchedRoles = roles.filter((role) => groups.includes(roleGroup[role]));
-  return matchedRoles.length === 1 ? matchedRoles[0] : null;
+  if (role === 'admin') return 'Admin';
+  if (role === 'clinician') return 'Clinician';
+  return 'Patient';
 }

@@ -1,13 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
+import { useSignUp } from '@clerk/expo';
 
 import { AuthHeader, AuthScreen, ErrorMessage, Field, PrimaryButton, TextButton } from '@/components/auth/auth-ui';
-import { useAuth } from '@/auth/auth-provider';
+import { messageForClerkError } from '@/auth/clerk-error';
 
 export default function VerifyEmailScreen() {
   const { email: rawEmail } = useLocalSearchParams<{ email?: string }>();
   const email = Array.isArray(rawEmail) ? rawEmail[0] : rawEmail ?? '';
-  const { confirmPatientSignUp, resendVerificationCode } = useAuth();
+  const { signUp, fetchStatus } = useSignUp();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
@@ -21,11 +22,18 @@ export default function VerifyEmailScreen() {
     }
     setIsSubmitting(true);
     try {
-      const signedIn = await confirmPatientSignUp(email, code);
-      if (!signedIn) {
-        setError('Your email is verified. Please sign in to continue.');
-        router.replace('/(auth)/sign-in');
+      const { error: verificationFailure } = await signUp.verifications.verifyEmailCode({ code: code.trim() });
+      if (verificationFailure) {
+        setError(messageForClerkError(verificationFailure));
+        return;
       }
+      if (signUp.status !== 'complete') {
+        setError('Your email is verified, but your account setup is not complete. Please sign in.');
+        router.replace('/(auth)/sign-in');
+        return;
+      }
+      const { error: finalizeFailure } = await signUp.finalize({ navigate: () => router.replace('/') });
+      if (finalizeFailure) setError(messageForClerkError(finalizeFailure));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'We could not verify that code.');
     } finally {
@@ -37,7 +45,11 @@ export default function VerifyEmailScreen() {
     setError(undefined);
     setNotice(undefined);
     try {
-      await resendVerificationCode(email);
+      const { error: resendFailure } = await signUp.verifications.sendEmailCode();
+      if (resendFailure) {
+        setError(messageForClerkError(resendFailure));
+        return;
+      }
       setNotice('A new verification code has been sent.');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'We could not send a new code.');
@@ -49,7 +61,7 @@ export default function VerifyEmailScreen() {
       <AuthHeader title="Verify your email" subtitle={email ? `Enter the code sent to ${email}.` : 'Enter the code sent to your email.'} />
       <ErrorMessage message={error ?? notice} />
       <Field label="Verification code" value={code} onChangeText={setCode} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" placeholder="123456" returnKeyType="done" onSubmitEditing={verify} />
-      <PrimaryButton label="Verify and continue" onPress={verify} disabled={isSubmitting} />
+      <PrimaryButton label="Verify and continue" onPress={verify} disabled={isSubmitting || fetchStatus === 'fetching'} />
       <TextButton label="Send a new code" onPress={resend} />
       <TextButton label="Back to sign in" onPress={() => router.replace('/(auth)/sign-in')} />
     </AuthScreen>
