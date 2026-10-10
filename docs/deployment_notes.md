@@ -56,7 +56,7 @@ All buckets: block public access, versioning on, SSE-S3 (AES256).
 | --- | --- | --- |
 | `nutrix-data` | `cgmacros/raw/CGMacros/` (3,502 files), `cgmacros/raw/physionet-1.0.0/` (7), `t1d/raw/Type1Diabetes.parquet` | Verified against local `data/` (counts and bytes). Sync with `ops/data/sync_data.sh pull|push`. |
 | `nutrix-models` | `models/<version>/` | Current version `v4-20261010`. |
-| `nutrix-input-images` | `photos/<person_id>/...` (written by the service; prefix fixed in `model/service/storage.py`), `test/hospital-meals/` (5 untouched hospital trays from Wikimedia Commons, licenses in `sources.csv`; same files in `tests/integration/hospital_meals/`) | Meal photos sent to `/predict`. The service hands the app a presigned PUT URL (`/photos/upload-url`) and reads photos by key; set `PMRF_PHOTO_BUCKET=nutrix-input-images`. No versioning (write-once keys); incomplete multipart uploads are aborted after 1 day. |
+| `nutrix-input-images` | `photos/<person_id>/...` (written by the service; prefix fixed in `model/service/storage.py`), `photos/test/hospital-meals/` (5 untouched hospital trays from Wikimedia Commons, licenses in `sources.csv`; same files in `tests/integration/hospital_meals/`; under `photos/` so the service can read them directly as photo keys) | Meal photos sent to `/predict`. The service hands the app a presigned PUT URL (`/photos/upload-url`) and reads photos by key; set `PMRF_PHOTO_BUCKET=nutrix-input-images`. No versioning (write-once keys); incomplete multipart uploads are aborted after 1 day. |
 | `nutrix-person-state` | `<pid>/hist.parquet`, `arrays.npz`, `profile.json` | First-week person states written by the service (created by the `pmrf` stack). |
 
 ## Model artifacts: `s3://nutrix-models/models/v4-20261010/`

@@ -10,6 +10,8 @@ export PMRF_API_KEY=$(aws secretsmanager get-secret-value --secret-id pmrf/api-k
   --profile nutrix --region us-west-2 --query SecretString --output text)
 ```
 
+`aws: command not found` in Git Bash: the shell was opened before the AWS CLI was installed. Run
+`export PATH="/c/Program Files/Amazon/AWSCLIV2:$PATH"` (add it to `~/.bashrc` to keep it).
 `ExpiredToken` means the event credentials expired: refresh them from the Workshop Studio page (see
 `docs/deployment_notes.md`) and run the export again.
 
@@ -37,24 +39,40 @@ DynamoDB + S3 between runs. Then it runs:
 
 Result on 2026-10-10 (DynamoDB + S3 store): 13/13 checks passed; about 315 ms per prediction.
 
-## 3. One prediction by hand
-
-The live service already has an onboarded test person, `demo-hospital-001` (CGMacros participant 001, CGM uploaded up
-to 2020-05-08 12:30):
+## 3. One prediction
 
 ```bash
-# Upload a photo and get its key
-KEY=$(curl -s -H "x-api-key: $PMRF_API_KEY" \
-  -F "file=@tests/integration/hospital_meals/korea_snuh_evening_meal.jpg;type=image/jpeg" \
-  $API/v1/people/demo-hospital-001/photos | python -c "import json,sys;print(json.load(sys.stdin)['photo_key'])")
+./scripts/predict.sh <patient> <photo> <meal time>
+./scripts/predict.sh cgmacros-003 korea_snuh_evening_meal 2020-03-18T12:30:00
+```
 
-# Predict; log_meal=false keeps the meal out of the person's food log
-curl -s -H "x-api-key: $PMRF_API_KEY" -H "content-type: application/json" \
-  -d "{\"photo_key\":\"$KEY\",\"meal_time\":\"2020-05-08T12:30:00\",\"log_meal\":false}" \
-  $API/v1/people/demo-hospital-001/predict | python -m json.tool | head -60
+```
+patient     cgmacros-003   meal time 2020-03-18 12:30:00 (lunch)
+photo       photos/test/hospital-meals/korea_snuh_evening_meal.jpg
+photo tags  a plate of mixed home-cooked food 54%, rice with meat 42%, yogurt 1%
+nutrition   carbs 42 g (+/- 36), protein 16 g, fat 23 g, 436 kcal
+glucose     before 113 -> peak 179 mg/dL (+66) at 56 min
+at minutes  30: 135  60: 169  90: 157  120: 142
+P(peak>140) 92%   P(peak>180) 49%
+confidence  high
+```
 
-# Profile (diet guide, estimated HbA1c, risk tier)
-curl -s -H "x-api-key: $PMRF_API_KEY" $API/v1/people/demo-hospital-001/profile | python -m json.tool
+- `<patient>`: one of the onboarded patients (section 4).
+- `<photo>`: a test image already in S3 (`korea_snuh_evening_meal`, `us_chicken_penne_greens`,
+  `germany_cabbage_roll_mash`, `germany_greek_salad_pita`, `israel_hospital_meal`, stored under
+  `s3://nutrix-input-images/photos/test/hospital-meals/`), any S3 key `photos/...`, or a local `.jpg` (uploaded first).
+- `<meal time>`: local time within the patient's record (before `CGM until` in section 4), with CGM in the 30 min before.
+- Add `--log` to record the meal in the patient's food log (`log_meal=true`: later predictions see it as the previous
+  meal). Without it the call is a preview and changes nothing, so you can compare several photos at the same time.
+- The API key is read from Secrets Manager unless `PMRF_API_KEY` is set. Errors print the service's reason.
+  Full JSON: `tests/integration/out/predict_<patient>.json`.
+
+The same call with curl (the photo is already in S3, so no upload):
+
+```bash
+curl -s -H "x-api-key: $PMRF_API_KEY" -H "content-type: application/json"   -d '{"photo_key":"photos/test/hospital-meals/korea_snuh_evening_meal.jpg","meal_time":"2020-03-18T12:30:00","log_meal":false}'   $API/v1/people/cgmacros-003/predict | python -m json.tool | head -60
+
+curl -s -H "x-api-key: $PMRF_API_KEY" $API/v1/people/cgmacros-003/profile | python -m json.tool   # profile
 ```
 
 What to look at in the prediction:
@@ -65,6 +83,9 @@ What to look at in the prediction:
 | `prediction.curve` | 0–120 min glucose curve with the 80% band (`lower80`, `upper80`) |
 | `prediction.peak_rise_mgdl`, `prediction.prob_peak_above_mgdl` | Peak rise and the chance of going above 140 / 180 mg/dL |
 | `confidence.level`, `confidence.flags` | Confidence and plain-language warnings |
+
+`demo-hospital-001` and `flowtest-user` are test users that `scripts/test_integration.sh` deletes and rebuilds on every
+run; use the patients in section 4 for demos.
 
 ## 4. Onboarded patients
 
@@ -80,7 +101,7 @@ rate uploaded, so predictions work at any time up to `cgm_until`:
 | `cgmacros-003` | T2D | 22 | 2020-03-21 08:08 |
 | `cgmacros-005` | T2D | 23 | 2020-08-27 10:37 |
 
-Predict any photo for one of them with the curl in section 3 (use their id and a `meal_time` before `cgm_until`).
+Predict for one of them with `./scripts/predict.sh` (section 3).
 Add or refresh patients (re-running replaces their history), optionally comparing one photo across all of them at
 the same study day and time:
 
@@ -108,7 +129,7 @@ A new person needs a first week of data before `/predict` works:
 | Status | Meaning |
 | --- | --- |
 | 401 | Missing or wrong `x-api-key` |
-| 404 | Person not onboarded yet (no `/history`), or unknown photo key |
+| 404 | Person not onboarded yet (no `/history`), or the photo key does not exist |
 | 409 | No CGM reading in the 30 min before the meal: send `/signals` or `recent_cgm` |
 | 422 | Invalid request: not an image, values out of range, wrong types |
 | 429 | Throttled: API Gateway allows 10 requests/s (burst 20) |
