@@ -12,7 +12,8 @@ and their first week of data (PMRF model).
 | `scripts/` | Build, test and deploy entry points | Deployment |
 | `ops/data/` | Dataset sync with S3 and test-photo selection | Deployment |
 | `tests/integration/` | Tests against a running service, incl. unseen hospital meal photos | Deployment |
-| `docs/` | Deployment notes: AWS account, buckets, model artifacts, decisions | Deployment |
+| `docs/` | [Deployment architecture](docs/architecture.md) and notes: AWS account, buckets, model artifacts, decisions | Deployment |
+| `infra/` | CloudFormation stack for the service (API Gateway, ALB, ECS Fargate, EFS) | Deployment |
 | `.github/workflows/` | CI: lint and image build, no AWS access | Deployment |
 
 ## Run the service locally

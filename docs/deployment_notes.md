@@ -30,6 +30,19 @@ Last updated: 2026-10-10
 
 Git Bash note: set `MSYS_NO_PATHCONV=1` when passing AWS names that start with `/` (e.g. log groups), or Git Bash rewrites them to Windows paths.
 
+## Live deployment
+
+| Item | Value |
+| --- | --- |
+| API | `https://8la1c1eazd.execute-api.us-west-2.amazonaws.com` (every `/v1/*` call needs the `x-api-key` header) |
+| API key | Secrets Manager `pmrf/api-key`: `aws secretsmanager get-secret-value --secret-id pmrf/api-key --query SecretString --output text` |
+| Stack | CloudFormation `pmrf` (`infra/pmrf.yaml`), architecture in `docs/architecture.md` |
+| Image | ECR `pmrf-api:<model version>-<git sha>` |
+| Logs | CloudWatch `/ecs/pmrf` |
+
+Verified 2026-10-10 against the live API: `scripts/test_integration.sh` passed 13/13 API-flow checks and returned the
+same hospital-meal predictions as the local container (~290 ms per prediction).
+
 ## S3 buckets
 
 All buckets: block public access, versioning on, SSE-S3 (AES256).

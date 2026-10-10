@@ -15,3 +15,6 @@ __pycache__/
 
 # Integration test output
 tests/integration/out/
+
+# Personal Claude Code settings
+.claude/settings.local.json
