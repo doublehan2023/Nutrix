@@ -1,0 +1,17 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Datasets live in S3, not git
+/data/
+
+# Secrets
+.env
+.env.*
+!.env.example
+.aws/
+
+# Integration test output
+tests/integration/out/
