@@ -62,7 +62,7 @@ flowchart LR
 
 ## Run the service locally
 
-Needs the AWS CLI (profile `nutrix`, see `docs/deployment_notes.md`), Docker and Python 3.11.
+Needs the AWS CLI (profile `nutrix` with the event account's temporary credentials), Docker and Python 3.11.
 
 ```bash
 cp .env.example .env              # set PMRF_API_KEY

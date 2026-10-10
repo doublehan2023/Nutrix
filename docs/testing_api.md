@@ -13,8 +13,9 @@ export PMRF_API_KEY=$(aws secretsmanager get-secret-value --secret-id pmrf/api-k
 
 `aws: command not found` in Git Bash: the shell was opened before the AWS CLI was installed. Run
 `export PATH="/c/Program Files/Amazon/AWSCLIV2:$PATH"` (add it to `~/.bashrc` to keep it).
-`ExpiredToken` means the event credentials expired: refresh them from the Workshop Studio page (see
-`docs/deployment_notes.md`) and run the export again.
+`ExpiredToken` means the event credentials expired: copy new ones from the Workshop Studio event page ("Get AWS CLI
+credentials") into the `nutrix` profile with `aws configure set aws_access_key_id|aws_secret_access_key|aws_session_token
+... --profile nutrix`, then run the export again.
 
 ## 1. Health check (no key needed)
 
