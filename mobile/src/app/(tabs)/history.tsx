@@ -1,20 +1,30 @@
-import { Text, View } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { DailyAverageChart } from '@/components/history/daily-average-chart';
+import { DaySelector } from '@/components/history/day-selector';
+import { HistoryTimelineChart } from '@/components/history/history-timeline-chart';
+import { LoggedMealsList } from '@/components/history/logged-meals-list';
+import { historyByDay, historyDayOrder, type HistoryDayId } from '@/data/history';
+
+const historyDays = historyDayOrder.map((day) => historyByDay[day]);
+
 export default function HistoryScreen() {
+  const [selectedDayId, setSelectedDayId] = useState<HistoryDayId>('D7');
+  const selectedDay = historyByDay[selectedDayId];
+
   return (
-    <SafeAreaView className="flex-1 bg-slate-50 px-6 pt-10">
-      <Text className="text-sm font-semibold uppercase tracking-widest text-teal-700">Nutrix</Text>
-      <Text className="mt-3 text-4xl font-bold tracking-tight text-slate-950">History</Text>
-      <Text className="mt-3 text-base leading-6 text-slate-600">
-        Review your past meals and glucose forecasts.
-      </Text>
-      <View className="mt-8 rounded-3xl border border-slate-200 bg-white p-6">
-        <Text className="text-base font-semibold text-slate-950">Your meal history will appear here</Text>
-        <Text className="mt-2 text-sm leading-5 text-slate-600">
-          As you add meals, you will be able to revisit their forecasts and patterns.
-        </Text>
-      </View>
+    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+      <ScrollView contentContainerClassName="px-5 pb-32" showsVerticalScrollIndicator={false}>
+        <Text className="pt-5 text-3xl font-semibold tracking-tight text-slate-950">History</Text>
+        <View className="mt-5">
+          <DaySelector days={historyDayOrder} onSelect={setSelectedDayId} selectedDay={selectedDayId} />
+        </View>
+        <HistoryTimelineChart day={selectedDay} />
+        <DailyAverageChart days={historyDays} selectedDay={selectedDayId} />
+        <LoggedMealsList day={selectedDay} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
