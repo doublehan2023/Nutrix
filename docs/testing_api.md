@@ -66,7 +66,32 @@ What to look at in the prediction:
 | `prediction.peak_rise_mgdl`, `prediction.prob_peak_above_mgdl` | Peak rise and the chance of going above 140 / 180 mg/dL |
 | `confidence.level`, `confidence.flags` | Confidence and plain-language warnings |
 
-## 4. A new person
+## 4. Onboarded patients
+
+Six CGMacros participants are stored as patients, two per group, with week 1 as history and all later CGM and heart
+rate uploaded, so predictions work at any time up to `cgm_until`:
+
+| Patient | Group | Usable week-1 meals | CGM until |
+| --- | --- | --- | --- |
+| `cgmacros-002` | Healthy | 21 | 2019-11-25 08:08 |
+| `cgmacros-004` | Healthy | 27 | 2023-09-21 07:48 |
+| `cgmacros-007` | Prediabetes | 13 | 2023-11-10 16:10 |
+| `cgmacros-008` | Prediabetes | 21 | 2023-02-09 08:57 |
+| `cgmacros-003` | T2D | 22 | 2020-03-21 08:08 |
+| `cgmacros-005` | T2D | 23 | 2020-08-27 10:37 |
+
+Predict any photo for one of them with the curl in section 3 (use their id and a `meal_time` before `cgm_until`).
+Add or refresh patients (re-running replaces their history), optionally comparing one photo across all of them at
+the same study day and time:
+
+```bash
+python -I ops/data/onboard_patients.py $API data/CGMacros 002 004 007 008 003 005   --compare-photo tests/integration/hospital_meals/korea_snuh_evening_meal.jpg --day 8 --time 12:30
+```
+
+Same Korean hospital meal at day 8, 12:30 (2026-10-10): predicted rise from +31 mg/dL (`cgmacros-005`) to +66 mg/dL
+(`cgmacros-003`); the group label alone does not order the responses, which is why the model is personalised.
+
+## 5. A new person
 
 A new person needs a first week of data before `/predict` works:
 
@@ -78,7 +103,7 @@ A new person needs a first week of data before `/predict` works:
 
 `tests/integration/demo_hospital_meals.py` does all three from CGMacros data and is the easiest template.
 
-## 5. Errors
+## 6. Errors
 
 | Status | Meaning |
 | --- | --- |
