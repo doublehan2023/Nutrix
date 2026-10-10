@@ -65,8 +65,12 @@ export default function ResetPasswordScreen() {
           navigate: () => router.replace("/"),
         });
         if (finalizeFailure) setError(messageForClerkError(finalizeFailure));
+      } else if (signIn.status === "needs_second_factor") {
+        router.replace("/(auth)/second-factor");
       } else {
-        router.replace("/(auth)/sign-in");
+        setError(
+          `Your password was reset, but sign-in is not complete (${signIn.status ?? "unknown status"}). Please sign in again.`,
+        );
       }
     } catch (reason) {
       setError(

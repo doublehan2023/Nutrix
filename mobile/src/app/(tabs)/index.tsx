@@ -1,26 +1,213 @@
-import { Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
+import * as ImageManipulator from 'expo-image-manipulator';
+import * as ImagePicker from 'expo-image-picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const MAX_IMAGE_EDGE = 2048;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+type MealPhoto = {
+  byteSize: number;
+  height: number;
+  uri: string;
+  width: number;
+};
+
+type PhotoStatus =
+  | 'cancelled'
+  | 'idle'
+  | 'normalization-error'
+  | 'oversize'
+  | 'permission-denied'
+  | 'processing';
+
+function base64ByteSize(base64: string) {
+  const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
+  return Math.floor((base64.length * 3) / 4) - padding;
+}
+
+async function normalizeMealPhoto(asset: ImagePicker.ImagePickerAsset): Promise<MealPhoto> {
+  const context = ImageManipulator.ImageManipulator.manipulate(asset.uri);
+  const longestEdge = Math.max(asset.width, asset.height);
+
+  if (longestEdge > MAX_IMAGE_EDGE) {
+    context.resize(asset.width >= asset.height ? { width: MAX_IMAGE_EDGE } : { height: MAX_IMAGE_EDGE });
+  }
+
+  const renderedImage = await context.renderAsync();
+  const output = await renderedImage.saveAsync({
+    base64: true,
+    compress: 0.8,
+    format: ImageManipulator.SaveFormat.JPEG,
+  });
+
+  if (!output.base64) {
+    throw new Error('The processed image did not include size metadata.');
+  }
+
+  const byteSize = base64ByteSize(output.base64);
+
+  if (byteSize > MAX_IMAGE_BYTES) {
+    throw new Error('PHOTO_TOO_LARGE');
+  }
+
+  return {
+    byteSize,
+    height: output.height,
+    uri: output.uri,
+    width: output.width,
+  };
+}
 
 export default function TodayScreen() {
+  const [photo, setPhoto] = useState<MealPhoto | null>(null);
+  const [status, setStatus] = useState<PhotoStatus>('idle');
+
+  async function processPickerResult(result: ImagePicker.ImagePickerResult) {
+    if (result.canceled) {
+      setStatus('cancelled');
+      return;
+    }
+
+    const asset = result.assets[0];
+    setStatus('processing');
+
+    try {
+      const normalizedPhoto = await normalizeMealPhoto(asset);
+      setPhoto(normalizedPhoto);
+      setStatus('idle');
+    } catch (error) {
+      setStatus(error instanceof Error && error.message === 'PHOTO_TOO_LARGE' ? 'oversize' : 'normalization-error');
+    }
+  }
+
+  async function openCamera() {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      setStatus('permission-denied');
+      return;
+    }
+
+    try {
+      await processPickerResult(
+        await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          quality: 1,
+        }),
+      );
+    } catch {
+      setStatus('normalization-error');
+    }
+  }
+
+  async function openPhotoLibrary() {
+    try {
+      await processPickerResult(
+        await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          quality: 1,
+        }),
+      );
+    } catch {
+      setStatus('normalization-error');
+    }
+  }
+
+  function choosePhotoSource() {
+    if (status === 'processing') {
+      return;
+    }
+
+    Alert.alert('Upload meal photo', 'Choose a photo source.', [
+      { text: 'Camera', onPress: () => void openCamera() },
+      { text: 'Photo Library', onPress: () => void openPhotoLibrary() },
+      { style: 'cancel', text: 'Cancel', onPress: () => setStatus('cancelled') },
+    ]);
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-slate-50 px-6 pt-10">
-      <Text className="text-sm font-semibold uppercase tracking-widest text-teal-700">
-        Nutrix
-      </Text>
-      <Text className="mt-3 text-4xl font-bold tracking-tight text-slate-950">
-        Today
-      </Text>
-      <Text className="mt-3 text-base leading-6 text-slate-600">
-        Your meal and glucose forecast will appear here.
-      </Text>
-      <View className="mt-8 rounded-3xl border border-teal-100 bg-teal-50 p-6">
-        <Text className="text-base font-semibold text-teal-950">
-          No forecast yet
+      <ScrollView contentContainerClassName="pb-32">
+        <Text className="text-sm font-semibold uppercase tracking-widest text-teal-700">
+          Nutrix
         </Text>
-        <Text className="mt-2 text-sm leading-5 text-teal-900">
-          Log a meal to see its expected glucose response.
+        <Text className="mt-3 text-4xl font-bold tracking-tight text-slate-950">Today</Text>
+        <Text className="mt-3 text-base leading-6 text-slate-600">
+          Your meal and glucose forecast will appear here.
         </Text>
-      </View>
+        <View className="mt-8 rounded-3xl border border-teal-100 bg-teal-50 p-6">
+          <Text className="text-base font-semibold text-teal-950">No forecast yet</Text>
+          <Text className="mt-2 text-sm leading-5 text-teal-900">
+            Log a meal to see its expected glucose response.
+          </Text>
+        </View>
+
+        <View className="mt-6 rounded-3xl border border-slate-200 bg-white p-5">
+          <Text className="text-lg font-bold text-slate-950">Meal photo</Text>
+          <Text className="mt-1 text-sm leading-5 text-slate-600">
+            Add a photo to help capture your meal details.
+          </Text>
+
+          {photo ? (
+            <View className="mt-4">
+              <Image
+                accessibilityLabel="Selected meal photo"
+                source={{ uri: photo.uri }}
+                className="h-52 w-full rounded-2xl bg-slate-100"
+              />
+              <Text className="mt-3 text-xs text-slate-500">
+                JPEG · {photo.width} × {photo.height} · {(photo.byteSize / 1024 / 1024).toFixed(1)} MB
+              </Text>
+            </View>
+          ) : null}
+
+          <Pressable
+            accessibilityLabel={photo ? 'Replace meal photo' : 'Upload meal photo'}
+            className="mt-4 items-center rounded-2xl bg-slate-950 px-4 py-4 active:bg-slate-800"
+            disabled={status === 'processing'}
+            onPress={choosePhotoSource}>
+            {status === 'processing' ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text className="font-semibold text-white">
+                {photo ? 'Replace meal photo' : 'Upload meal photo'}
+              </Text>
+            )}
+          </Pressable>
+
+          {status === 'processing' ? (
+            <Text className="mt-3 text-center text-sm text-slate-600">Preparing your photo…</Text>
+          ) : null}
+          {status === 'cancelled' ? (
+            <Text className="mt-3 text-center text-sm text-slate-600">Photo selection cancelled.</Text>
+          ) : null}
+          {status === 'permission-denied' ? (
+            <Text className="mt-3 text-center text-sm text-rose-700">
+              Camera access was denied. Enable it in Settings to take a meal photo.
+            </Text>
+          ) : null}
+          {status === 'normalization-error' ? (
+            <Text className="mt-3 text-center text-sm text-rose-700">
+              We could not prepare that photo. Try another image.
+            </Text>
+          ) : null}
+          {status === 'oversize' ? (
+            <Text className="mt-3 text-center text-sm text-rose-700">
+              That photo is over 8 MB after preparation. Try another image.
+            </Text>
+          ) : null}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
