@@ -12,8 +12,9 @@ import os
 from contextlib import asynccontextmanager
 
 import pandas as pd
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.routing import APIRoute
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from service import app as base
@@ -69,7 +70,10 @@ async def authenticate_mobile_routes(request: Request, call_next):
     exposed to the mobile client.
     """
     if request.url.path.startswith("/v1/mobile/"):
-        request.state.mobile_identity = verify_mobile_request(request)
+        try:
+            request.state.mobile_identity = verify_mobile_request(request)
+        except HTTPException as error:
+            return JSONResponse(status_code=error.status_code, content={"detail": error.detail})
         headers = [(key, value) for key, value in request.scope["headers"] if key != b"x-api-key"]
         headers.append((b"x-api-key", base.CFG["api_key"].encode()))
         request.scope["headers"] = headers
