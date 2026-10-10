@@ -6,6 +6,7 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/auth/auth-provider';
 import { ClerkProvider } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
+import { colors } from '../../constants/theme';
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
 
@@ -21,7 +22,7 @@ function RootNavigator() {
   return (
     <>
       <AnimatedSplashOverlay />
-      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+      <Stack screenOptions={{ headerShown: false, animation: 'fade', contentStyle: { backgroundColor: colors.background } }}>
         <Stack.Screen name="index" />
         <Stack.Protected guard={isReady && Boolean(user)}>
           <Stack.Screen name="(tabs)" />

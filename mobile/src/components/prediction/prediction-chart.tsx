@@ -30,15 +30,15 @@ function ChartLegend() {
     <View className="mt-3 flex-row flex-wrap gap-x-5 gap-y-2">
       <View className="flex-row items-center">
         <View className="mr-2 h-1 w-5 rounded-full bg-purple-600" />
-        <Text className="text-sm text-slate-500">Predicted</Text>
+        <Text className="text-sm text-copy">Predicted</Text>
       </View>
       <View className="flex-row items-center">
         <View className="mr-2 h-1 w-5 rounded-full bg-emerald-500" />
-        <Text className="text-sm text-slate-500">Observed</Text>
+        <Text className="text-sm text-copy">Observed</Text>
       </View>
       <View className="flex-row items-center">
         <View className="mr-2 h-3 w-4 rounded bg-purple-200" />
-        <Text className="text-sm text-slate-500">Uncertainty</Text>
+        <Text className="text-sm text-copy">Uncertainty</Text>
       </View>
     </View>
   );
@@ -61,8 +61,8 @@ export function PredictionChart({ data, day }: PredictionChartProps) {
   ].join(' ');
 
   return (
-    <View className="rounded-[30px] bg-white p-5 shadow-sm">
-      <Text className="text-xl font-semibold text-slate-900">Predicted vs observed · Day {day}</Text>
+    <View className="app-card-lg">
+      <Text className="text-xl font-semibold text-ink">Predicted vs observed · Day {day}</Text>
       <ChartLegend />
       <View className="mt-2 items-center">
         <Svg height={chartHeight} width={chartWidth} accessibilityLabel={`Predicted and observed glucose chart for Day ${day}`}>

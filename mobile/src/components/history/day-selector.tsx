@@ -21,7 +21,7 @@ export function DaySelector({ days, onSelect, selectedDay }: DaySelectorProps) {
             accessibilityRole="button"
             accessibilityState={{ selected }}
             className={`h-12 flex-1 items-center justify-center rounded-2xl ${
-              selected ? 'bg-[#2861f5]' : 'bg-white'
+              selected ? 'bg-brand' : 'bg-surface'
             }`}
             onPress={() => onSelect(day)}
             style={({ pressed }) => ({
@@ -32,7 +32,7 @@ export function DaySelector({ days, onSelect, selectedDay }: DaySelectorProps) {
               shadowRadius: 8,
               elevation: 2,
             })}>
-            <Text className={`text-sm font-semibold ${selected ? 'text-white' : 'text-slate-800'}`}>{day}</Text>
+            <Text className={`text-sm font-semibold ${selected ? 'text-white' : 'text-ink'}`}>{day}</Text>
           </Pressable>
         );
       })}

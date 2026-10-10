@@ -3,19 +3,43 @@
 @tailwind utilities;
 
 @layer components {
-  .tabs-icon {
-    @apply size-12 items-center justify-center;
+  .app-screen {
+    @apply flex-1 bg-canvas;
   }
 
-  .tabs-pill {
-    @apply size-12 items-center justify-center rounded-full bg-transparent;
+  .app-scroll-content {
+    @apply px-5 pb-32;
   }
 
-  .tabs-active {
-    @apply bg-accent;
+  .app-page-title {
+    @apply pt-5 text-3xl font-semibold tracking-tight text-ink;
   }
 
-  .tabs-glyph {
-    @apply size-6;
+  .app-card {
+    @apply rounded-card bg-surface p-5 shadow-card;
+  }
+
+  .app-card-lg {
+    @apply rounded-card-lg bg-surface p-5 shadow-card;
+  }
+
+  .app-card-title {
+    @apply text-lg font-semibold text-ink;
+  }
+
+  .app-body-copy {
+    @apply text-base leading-6 text-copy;
+  }
+
+  .app-caption {
+    @apply text-sm text-copy;
+  }
+
+  .app-button-primary {
+    @apply items-center rounded-2xl bg-brand px-4 py-4 active:bg-brand-dark;
+  }
+
+  .app-button-secondary {
+    @apply items-center rounded-2xl bg-brand-dark px-4 py-4 active:bg-brand;
   }
 }

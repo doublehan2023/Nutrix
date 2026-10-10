@@ -1,26 +1,34 @@
-import { Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { FeatureImportanceCard } from '@/components/insights/feature-importance-card';
+import { ModelConfidenceCard } from '@/components/insights/model-confidence-card';
+import { ResponseComparisonChart } from '@/components/insights/response-comparison-chart';
+import { TimeInRangeCard } from '@/components/insights/time-in-range-card';
+import { featureImportance, getPersonalInsights, populationResponse } from '@/data/insights';
+import { historyByDay, historyDayOrder } from '@/data/history';
+
+const insights = getPersonalInsights(historyDayOrder.map((day) => historyByDay[day]));
 
 export default function InsightsScreen() {
   return (
-    <SafeAreaView className="flex-1 bg-slate-50 px-6 pt-10">
-      <Text className="text-sm font-semibold uppercase tracking-widest text-teal-700">
-        Nutrix
-      </Text>
-      <Text className="mt-3 text-4xl font-bold tracking-tight text-slate-950">
-        Insights
-      </Text>
-      <Text className="mt-3 text-base leading-6 text-slate-600">
-        Find patterns in your meals and glucose responses.
-      </Text>
-      <View className="mt-8 rounded-3xl border border-slate-200 bg-white p-6">
-        <Text className="text-base font-semibold text-slate-950">
-          Insights will grow with you
+    <SafeAreaView className="app-screen" edges={['top']}>
+      <ScrollView contentContainerClassName="app-scroll-content" showsVerticalScrollIndicator={false}>
+        <Text className="app-page-title">Insights</Text>
+        <View className="mt-5">
+          <TimeInRangeCard data={insights.timeInRange} />
+        </View>
+        <ResponseComparisonChart
+          minutes={insights.responseMinutes}
+          personal={insights.personalResponse}
+          population={populationResponse}
+        />
+        <FeatureImportanceCard features={featureImportance} />
+        <ModelConfidenceCard daysTracked={insights.daysTracked} loggedMeals={insights.loggedMeals} />
+        <Text className="mt-5 text-center text-xs leading-5 text-copy">
+          These demo insights are not medical advice.
         </Text>
-        <Text className="mt-2 text-sm leading-5 text-slate-600">
-          Log meals and connect glucose data to uncover personalized trends.
-        </Text>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

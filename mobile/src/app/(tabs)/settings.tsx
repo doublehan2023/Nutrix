@@ -14,30 +14,30 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50 px-6 pt-10">
-      <Text className="text-sm font-semibold uppercase tracking-widest text-teal-700">
+    <SafeAreaView className="app-screen px-5 pt-5">
+      <Text className="text-sm font-semibold uppercase tracking-widest text-brand">
         Nutrix
       </Text>
-      <Text className="mt-3 text-4xl font-bold tracking-tight text-slate-950">
+      <Text className="mt-3 text-4xl font-bold tracking-tight text-ink">
         Settings
       </Text>
-      <Text className="mt-3 text-base leading-6 text-slate-600">
+      <Text className="app-body-copy mt-3">
         Manage your preferences and health-data connections.
       </Text>
-      <View className="mt-8 rounded-3xl border border-slate-200 bg-white p-6">
-        <Text className="text-base font-semibold text-slate-950">
+      <View className="app-card mt-8">
+        <Text className="text-base font-semibold text-ink">
           {user?.name ?? 'Your account'}
         </Text>
-        <Text className="mt-1 text-sm text-slate-600">{user?.email}</Text>
-        <View className="mt-3 self-start rounded-full bg-teal-50 px-3 py-1">
-          <Text className="text-xs font-bold uppercase tracking-wide text-teal-800">{user?.role}</Text>
+        <Text className="mt-1 text-sm text-copy">{user?.email}</Text>
+        <View className="mt-3 self-start rounded-full bg-brand-subtle px-3 py-1">
+          <Text className="text-xs font-bold uppercase tracking-wide text-brand-dark">{user?.role}</Text>
         </View>
       </View>
-      <View className="mt-4 rounded-3xl border border-slate-200 bg-white p-6">
-        <Text className="text-base font-semibold text-slate-950">
+      <View className="app-card mt-4">
+        <Text className="text-base font-semibold text-ink">
           Your preferences
         </Text>
-        <Text className="mt-2 text-sm leading-5 text-slate-600">
+        <Text className="mt-2 text-sm leading-5 text-copy">
           Dietary preferences, glucose data, notifications, and privacy controls
           will live here.
         </Text>
@@ -46,7 +46,7 @@ export default function SettingsScreen() {
         accessibilityRole="button"
         onPress={requestSignOut}
         className="mt-6 items-center rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
-        <Text className="text-base font-bold text-red-700">Sign out</Text>
+        <Text className="text-base font-bold text-danger">Sign out</Text>
       </Pressable>
     </SafeAreaView>
   );

@@ -15,9 +15,9 @@ export default function HistoryScreen() {
   const selectedDay = historyByDay[selectedDayId];
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
-      <ScrollView contentContainerClassName="px-5 pb-32" showsVerticalScrollIndicator={false}>
-        <Text className="pt-5 text-3xl font-semibold tracking-tight text-slate-950">History</Text>
+    <SafeAreaView className="app-screen" edges={['top']}>
+      <ScrollView contentContainerClassName="app-scroll-content" showsVerticalScrollIndicator={false}>
+        <Text className="app-page-title">History</Text>
         <View className="mt-5">
           <DaySelector days={historyDayOrder} onSelect={setSelectedDayId} selectedDay={selectedDayId} />
         </View>

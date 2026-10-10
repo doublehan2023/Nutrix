@@ -19,6 +19,10 @@ export type LoggedMeal = {
   time: string;
 };
 
+export type MealResponse = {
+  deltas: readonly number[];
+};
+
 export type HistoryDay = {
   averageGlucose: number;
   events: readonly HistoryEvent[];
@@ -26,6 +30,7 @@ export type HistoryDay = {
   heartRate: readonly HistorySeriesPoint[];
   id: HistoryDayId;
   meals: readonly LoggedMeal[];
+  mealResponses: readonly MealResponse[];
 };
 
 export const historyDayOrder: readonly HistoryDayId[] = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7'];
@@ -34,6 +39,10 @@ const hours = [0, 3, 6, 8, 10, 12.5, 15, 18, 19.2, 21, 24] as const;
 
 function series(values: readonly number[]): HistorySeriesPoint[] {
   return hours.map((hour, index) => ({ hour, value: values[index] }));
+}
+
+function mealResponses(...responses: readonly number[][]): readonly MealResponse[] {
+  return responses.map((deltas) => ({ deltas }));
 }
 
 export const historyByDay: Record<HistoryDayId, HistoryDay> = {
@@ -53,6 +62,7 @@ export const historyByDay: Record<HistoryDayId, HistoryDay> = {
       { name: 'Lunch', summary: 'Turkey sandwich', time: '12:35 PM', carbs: 51, peak: 144 },
       { name: 'Dinner', summary: 'Salmon and rice', time: '7:20 PM', carbs: 58, peak: 151 },
     ],
+    mealResponses: mealResponses([0, 15, 31, 23, 7], [0, 17, 35, 25, 8], [0, 20, 40, 29, 10]),
   },
   D2: {
     id: 'D2',
@@ -71,6 +81,7 @@ export const historyByDay: Record<HistoryDayId, HistoryDay> = {
       { name: 'Lunch', summary: 'Lentil soup', time: '12:20 PM', carbs: 46, peak: 147 },
       { name: 'Dinner', summary: 'Taco bowl', time: '7:05 PM', carbs: 64, peak: 158 },
     ],
+    mealResponses: mealResponses([0, 18, 36, 26, 8], [0, 16, 33, 24, 7], [0, 22, 43, 31, 11]),
   },
   D3: {
     id: 'D3',
@@ -88,6 +99,7 @@ export const historyByDay: Record<HistoryDayId, HistoryDay> = {
       { name: 'Lunch', summary: 'Chicken salad', time: '12:40 PM', carbs: 29, peak: 122 },
       { name: 'Dinner', summary: 'Vegetable stir-fry', time: '6:55 PM', carbs: 54, peak: 139 },
     ],
+    mealResponses: mealResponses([0, 14, 28, 20, 6], [0, 11, 23, 17, 5], [0, 17, 34, 24, 8]),
   },
   D4: {
     id: 'D4',
@@ -105,6 +117,7 @@ export const historyByDay: Record<HistoryDayId, HistoryDay> = {
       { name: 'Lunch', summary: 'Grain bowl', time: '12:35 PM', carbs: 55, peak: 149 },
       { name: 'Dinner', summary: 'Sushi rolls', time: '7:10 PM', carbs: 72, peak: 163 },
     ],
+    mealResponses: mealResponses([0, 23, 44, 32, 11], [0, 19, 38, 28, 9], [0, 26, 49, 35, 13]),
   },
   D5: {
     id: 'D5',
@@ -122,6 +135,7 @@ export const historyByDay: Record<HistoryDayId, HistoryDay> = {
       { name: 'Lunch', summary: 'Quinoa bowl', time: '12:20 PM', carbs: 52, peak: 136 },
       { name: 'Dinner', summary: 'Pasta primavera', time: '7:10 PM', carbs: 66, peak: 154 },
     ],
+    mealResponses: mealResponses([0, 17, 34, 25, 8], [0, 16, 31, 22, 7], [0, 21, 41, 30, 10]),
   },
   D6: {
     id: 'D6',
@@ -140,6 +154,7 @@ export const historyByDay: Record<HistoryDayId, HistoryDay> = {
       { name: 'Lunch', summary: 'Chicken rice bowl', time: '12:30 PM', carbs: 62, peak: 155 },
       { name: 'Dinner', summary: 'Burger and sweet potato', time: '7:15 PM', carbs: 74, peak: 166 },
     ],
+    mealResponses: mealResponses([0, 25, 48, 35, 12], [0, 22, 43, 31, 10], [0, 29, 54, 39, 14]),
   },
   D7: {
     id: 'D7',
@@ -158,5 +173,6 @@ export const historyByDay: Record<HistoryDayId, HistoryDay> = {
       { name: 'Lunch', summary: 'Chicken rice bowl', time: '12:30 PM', carbs: 62, peak: 155 },
       { name: 'Dinner', summary: 'Pasta and salad', time: '7:10 PM', carbs: 70, peak: 148 },
     ],
+    mealResponses: mealResponses([0, 18, 36, 26, 8], [0, 22, 43, 31, 10], [0, 20, 39, 28, 9]),
   },
 };

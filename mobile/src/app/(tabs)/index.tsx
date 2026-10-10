@@ -138,25 +138,25 @@ export default function TodayScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50 px-6 pt-10">
+    <SafeAreaView className="app-screen px-5 pt-5">
       <ScrollView contentContainerClassName="pb-32">
-        <Text className="text-sm font-semibold uppercase tracking-widest text-teal-700">
+        <Text className="text-sm font-semibold uppercase tracking-widest text-brand">
           Nutrix
         </Text>
-        <Text className="mt-3 text-4xl font-bold tracking-tight text-slate-950">Today</Text>
-        <Text className="mt-3 text-base leading-6 text-slate-600">
+        <Text className="mt-3 text-4xl font-bold tracking-tight text-ink">Today</Text>
+        <Text className="app-body-copy mt-3">
           Your meal and glucose forecast will appear here.
         </Text>
-        <View className="mt-8 rounded-3xl border border-teal-100 bg-teal-50 p-6">
-          <Text className="text-base font-semibold text-teal-950">No forecast yet</Text>
-          <Text className="mt-2 text-sm leading-5 text-teal-900">
+        <View className="mt-8 rounded-card border border-brand-soft bg-brand-subtle p-6">
+          <Text className="text-base font-semibold text-ink">No forecast yet</Text>
+          <Text className="mt-2 text-sm leading-5 text-copy">
             Log a meal to see its expected glucose response.
           </Text>
         </View>
 
-        <View className="mt-6 rounded-3xl border border-slate-200 bg-white p-5">
-          <Text className="text-lg font-bold text-slate-950">Meal photo</Text>
-          <Text className="mt-1 text-sm leading-5 text-slate-600">
+        <View className="app-card mt-6">
+          <Text className="app-card-title">Meal photo</Text>
+          <Text className="mt-1 text-sm leading-5 text-copy">
             Add a photo to help capture your meal details.
           </Text>
 
@@ -165,9 +165,9 @@ export default function TodayScreen() {
               <Image
                 accessibilityLabel="Selected meal photo"
                 source={{ uri: photo.uri }}
-                className="h-52 w-full rounded-2xl bg-slate-100"
+                className="h-52 w-full rounded-2xl bg-line"
               />
-              <Text className="mt-3 text-xs text-slate-500">
+              <Text className="mt-3 text-xs text-copy">
                 JPEG · {photo.width} × {photo.height} · {(photo.byteSize / 1024 / 1024).toFixed(1)} MB
               </Text>
             </View>
@@ -175,7 +175,7 @@ export default function TodayScreen() {
 
           <Pressable
             accessibilityLabel={photo ? 'Replace meal photo' : 'Upload meal photo'}
-            className="mt-4 items-center rounded-2xl bg-slate-950 px-4 py-4 active:bg-slate-800"
+            className="app-button-primary mt-4"
             disabled={status === 'processing'}
             onPress={choosePhotoSource}>
             {status === 'processing' ? (
@@ -191,30 +191,30 @@ export default function TodayScreen() {
             <Pressable
               accessibilityLabel="Predict glucose reponse"
               accessibilityRole="button"
-              className="mt-3 items-center rounded-2xl bg-teal-700 px-4 py-4 active:bg-teal-800"
+              className="app-button-secondary mt-3"
               onPress={() => router.push('/prediction')}>
               <Text className="font-semibold text-white">Predict glucose reponse</Text>
             </Pressable>
           ) : null}
 
           {status === 'processing' ? (
-            <Text className="mt-3 text-center text-sm text-slate-600">Preparing your photo…</Text>
+            <Text className="mt-3 text-center text-sm text-copy">Preparing your photo…</Text>
           ) : null}
           {status === 'cancelled' ? (
-            <Text className="mt-3 text-center text-sm text-slate-600">Photo selection cancelled.</Text>
+            <Text className="mt-3 text-center text-sm text-copy">Photo selection cancelled.</Text>
           ) : null}
           {status === 'permission-denied' ? (
-            <Text className="mt-3 text-center text-sm text-rose-700">
+            <Text className="mt-3 text-center text-sm text-danger">
               Camera access was denied. Enable it in Settings to take a meal photo.
             </Text>
           ) : null}
           {status === 'normalization-error' ? (
-            <Text className="mt-3 text-center text-sm text-rose-700">
+            <Text className="mt-3 text-center text-sm text-danger">
               We could not prepare that photo. Try another image.
             </Text>
           ) : null}
           {status === 'oversize' ? (
-            <Text className="mt-3 text-center text-sm text-rose-700">
+            <Text className="mt-3 text-center text-sm text-danger">
               That photo is over 8 MB after preparation. Try another image.
             </Text>
           ) : null}

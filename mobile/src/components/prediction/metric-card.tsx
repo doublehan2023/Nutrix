@@ -8,10 +8,10 @@ type MetricCardProps = {
 
 export function MetricCard({ label, value, unit }: MetricCardProps) {
   return (
-    <View className="flex-1 rounded-3xl bg-white p-4 shadow-sm">
-      <Text className="text-sm text-slate-500">{label}</Text>
-      <Text className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">{value}</Text>
-      <Text className="mt-1 text-xs text-slate-500">{unit}</Text>
+    <View className="flex-1 rounded-card bg-surface p-4 shadow-card">
+      <Text className="text-sm text-copy">{label}</Text>
+      <Text className="mt-1 text-3xl font-semibold tracking-tight text-ink">{value}</Text>
+      <Text className="mt-1 text-xs text-copy">{unit}</Text>
     </View>
   );
 }

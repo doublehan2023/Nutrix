@@ -1,14 +1,14 @@
 export const colors = {
-  background: "#fff9e3",
-  foreground: "#081126",
-  card: "#fff8e7",
-  muted: "#f6eecf",
-  mutedForeground: "rgba(0, 0, 0, 0.6)",
-  primary: "#081126",
-  accent: "#5ab1fa",
-  border: "rgba(0, 0, 0, 0.1)",
-  success: "#16a34a",
-  destructive: "#dc2626",
+  background: '#f8fafc',
+  foreground: '#0f172a',
+  card: '#ffffff',
+  muted: '#f1f5f9',
+  mutedForeground: '#64748b',
+  primary: '#2861f5',
+  accent: '#2861f5',
+  border: '#e2e8f0',
+  success: '#10b981',
+  destructive: '#e11d48',
 } as const;
 
 export const spacing = {
@@ -38,5 +38,7 @@ export const components = {
     height: spacing[20],
     iconSize: spacing[7],
     labelTopMargin: spacing[2],
+    activeColor: colors.primary,
+    inactiveColor: '#64748b',
   },
 } as const;

@@ -5,11 +5,11 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { tabs } from '../../../constants/data';
-import { components } from '../../../constants/theme';
+import { colors, components } from '../../../constants/theme';
 
 const tabBar = components.tabBar;
-const activeTabColor = '#2861f5';
-const inactiveTabColor = '#6b7280';
+const activeTabColor = tabBar.activeColor;
+const inactiveTabColor = tabBar.inactiveColor;
 
 function PatientTabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
   return (
@@ -102,11 +102,11 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderTopColor: '#e5e7eb',
+    backgroundColor: colors.card,
+    borderTopColor: colors.border,
     borderTopWidth: StyleSheet.hairlineWidth,
     elevation: 8,
-    shadowColor: '#0f172a',
+    shadowColor: colors.foreground,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,

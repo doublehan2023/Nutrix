@@ -7,6 +7,7 @@ import { AuthHeader, AuthScreen, ErrorMessage, RoleTab, TextButton } from '@/com
 import { useAuth } from '@/auth/auth-provider';
 import { messageForClerkError } from '@/auth/clerk-error';
 import { roles, type Role } from '@/auth/types';
+import { colors } from '../../../constants/theme';
 
 type FieldErrors = {
   email?: string;
@@ -163,20 +164,20 @@ export default function SignInScreen() {
 }
 
 const styles = StyleSheet.create({
-  roleTabs: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#c9d1dc', marginBottom: 24 },
+  roleTabs: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, marginBottom: 24 },
   notice: { backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe', borderRadius: 12, padding: 12, marginBottom: 17 },
   noticeTitle: { color: '#1e3a8a', fontSize: 14, fontWeight: '800', marginBottom: 3 },
   noticeText: { color: '#334f7a', fontSize: 14, lineHeight: 19 },
   form: { gap: 16 },
   field: { gap: 8 },
-  label: { color: '#26344c', fontSize: 16, fontWeight: '700' },
-  input: { height: 54, borderWidth: 1, borderColor: '#bdc8d7', borderRadius: 14, color: '#101827', fontSize: 17, paddingHorizontal: 15, backgroundColor: '#fff' },
-  inputError: { borderColor: '#dc2626' },
+  label: { color: colors.foreground, fontSize: 16, fontWeight: '700' },
+  input: { height: 54, borderWidth: 1, borderColor: colors.border, borderRadius: 14, color: colors.foreground, fontSize: 17, paddingHorizontal: 15, backgroundColor: colors.card },
+  inputError: { borderColor: colors.destructive },
   fieldError: { color: '#b91c1c', fontSize: 13, fontWeight: '600' },
-  signInButton: { minHeight: 56, borderRadius: 14, justifyContent: 'center', alignItems: 'center', backgroundColor: '#2563eb', marginTop: 2, elevation: 3 },
+  signInButton: { minHeight: 56, borderRadius: 14, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primary, marginTop: 2, elevation: 3 },
   signInButtonText: { color: '#fff', fontSize: 17, fontWeight: '800' },
   buttonMuted: { opacity: 0.65 },
   linkRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', gap: 5, marginTop: 2, paddingVertical: 10 },
-  linkCopy: { color: '#526075', fontSize: 15 },
-  link: { color: '#1d4ed8', fontSize: 15, fontWeight: '800' },
+  linkCopy: { color: colors.mutedForeground, fontSize: 15 },
+  link: { color: colors.primary, fontSize: 15, fontWeight: '800' },
 });

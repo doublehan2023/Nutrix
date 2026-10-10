@@ -34,8 +34,8 @@ export default function PredictionScreen() {
   const router = useRouter();
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
-      <ScrollView contentContainerClassName="px-4 pb-12">
+    <SafeAreaView className="app-screen" edges={['top']}>
+      <ScrollView contentContainerClassName="px-5 pb-12">
         <PredictionHeader onBack={() => router.back()} title="Meal prediction" />
         <PredictionChart data={chartData} day={8} />
 
@@ -45,15 +45,15 @@ export default function PredictionScreen() {
           <MetricCard label="2h iAUC" unit="mg·min/dL" value="3,420" />
         </View>
 
-        <View className="mt-4 rounded-3xl bg-white p-5 shadow-sm">
-          <Text className="text-base font-semibold text-slate-900">Glucose after meal</Text>
-          <Text className="mt-1 text-sm text-slate-500">Predicted · observed</Text>
+        <View className="app-card mt-4">
+          <Text className="text-base font-semibold text-ink">Glucose after meal</Text>
+          <Text className="mt-1 text-sm text-copy">Predicted · observed</Text>
           <View className="mt-4 flex-row justify-between">
             {comparisonRows.map((row) => (
               <View className="items-center" key={row.minute}>
-                <Text className="text-xs text-slate-500">{row.minute}</Text>
-                <Text className="mt-1 text-2xl font-semibold text-purple-600">{row.predicted}</Text>
-                <Text className="mt-1 text-xs font-medium text-emerald-600">obs {row.observed}</Text>
+                <Text className="text-xs text-copy">{row.minute}</Text>
+                <Text className="mt-1 text-2xl font-semibold text-prediction">{row.predicted}</Text>
+                <Text className="mt-1 text-xs font-medium text-glucose">obs {row.observed}</Text>
               </View>
             ))}
           </View>
@@ -61,12 +61,12 @@ export default function PredictionScreen() {
 
         <PredictionDrivers drivers={drivers} />
 
-        <View className="mt-4 rounded-3xl bg-amber-50 px-5 py-4">
+        <View className="mt-4 rounded-card bg-amber-50 px-5 py-4">
           <Text className="text-base font-semibold text-amber-800">Confidence: moderate · ±11 mg/dL</Text>
           <Text className="mt-1 text-sm leading-5 text-amber-700">Learned from 7 days of personal data.</Text>
         </View>
 
-        <Text className="mt-5 text-center text-xs leading-5 text-slate-500">
+        <Text className="mt-5 text-center text-xs leading-5 text-copy">
           This is a demonstration estimate and not medical advice.
         </Text>
       </ScrollView>

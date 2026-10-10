@@ -6,6 +6,7 @@ import { useSignUp } from '@clerk/expo';
 import { AuthHeader, AuthScreen, ErrorMessage, Field, PrimaryButton, TextButton } from '@/components/auth/auth-ui';
 import { messageForClerkError } from '@/auth/clerk-error';
 import { meetsPasswordRequirement, passwordRequirement } from '@/auth/password-policy';
+import { colors } from '../../../constants/theme';
 
 export default function SignUpScreen() {
   const { signUp, fetchStatus } = useSignUp();
@@ -74,7 +75,7 @@ export default function SignUpScreen() {
 
 const styles = StyleSheet.create({
   passwordHint: {
-    color: '#52627D',
+    color: colors.mutedForeground,
     fontSize: 14,
     lineHeight: 20,
     marginTop: -12,

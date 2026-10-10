@@ -23,7 +23,7 @@ function LegendItem({ color, label, diamond = false }: { color: string; diamond?
         className={diamond ? 'mr-1.5 h-2.5 w-2.5 rotate-45' : 'mr-1.5 h-3 w-3 rounded-full'}
         style={{ backgroundColor: color }}
       />
-      <Text className="text-xs text-slate-500">{label}</Text>
+      <Text className="text-xs text-copy">{label}</Text>
     </View>
   );
 }
@@ -37,8 +37,8 @@ export function HistoryTimelineChart({ day }: HistoryTimelineChartProps) {
   const toY = (value: number) => chartPadding.top + ((180 - value) / 120) * plotHeight;
 
   return (
-    <View className="mt-4 rounded-[28px] bg-white p-5 shadow-sm">
-      <Text className="text-lg font-semibold text-slate-900">
+    <View className="app-card mt-4">
+      <Text className="app-card-title">
         Day {day.id.slice(1)} · glucose, heart rate, meals
       </Text>
       <View className="mt-2 items-center">
