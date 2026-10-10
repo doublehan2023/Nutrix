@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Predict one patient's glucose response to a meal photo, against the deployed API, in one command.
-#   ./scripts/predict.sh <patient> <photo> <meal time YYYY-MM-DDTHH:MM:SS> [--log]
-#   e.g. ./scripts/predict.sh cgmacros-003 korea_snuh_evening_meal 2020-03-18T12:30:00
+#   ./scripts/predict.sh <patient> <photo> [<meal time YYYY-MM-DDTHH:MM:SS>] [--log]
+#   e.g. ./scripts/predict.sh cgmacros-003 day8-lunch
+#        ./scripts/predict.sh cgmacros-003 korea_snuh_evening_meal 2020-03-18T12:30:00
 # <photo> is one of:
+#   - day8-<meal type> or day8-<n>: the patient's own day-8 meal (first of that type, or the n-th of the day) from
+#     tests/integration/day8_meals.csv (written by ops/data/onboard_patients.py). The meal time comes from the list, and
+#     the response includes the observed curve, so this is the one to use for predicted vs observed
 #   - a test image name (already in S3 under photos/test/hospital-meals/): korea_snuh_evening_meal,
 #     us_chicken_penne_greens, germany_cabbage_roll_mash, germany_greek_salad_pita, israel_hospital_meal
 #   - an S3 key the service already has: photos/...
@@ -15,9 +19,12 @@ for d in "/c/Program Files/Amazon/AWSCLIV2"; do [ -d "$d" ] && PATH="$d:$PATH"; 
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PATIENT="${1:?usage: $0 <patient> <photo> <meal time> [--log]}"
-PHOTO="${2:?photo missing: a test image name, an S3 key photos/... or a local .jpg}"
-MEAL_TIME="${3:?meal time missing, e.g. 2020-03-18T12:30:00}"
-LOG=false; [ "${4:-}" = "--log" ] && LOG=true
+PHOTO="${2:?photo missing: day8-<meal type>, a test image name, an S3 key photos/... or a local .jpg}"
+shift 2
+LOG=false; MEAL_TIME=""
+for arg in "$@"; do
+  if [ "$arg" = "--log" ]; then LOG=true; else MEAL_TIME="$arg"; fi
+done
 API="${API:-https://8la1c1eazd.execute-api.us-west-2.amazonaws.com}"
 
 if [ -z "${PMRF_API_KEY:-}" ]; then
@@ -25,8 +32,22 @@ if [ -z "${PMRF_API_KEY:-}" ]; then
     --region us-west-2 --query SecretString --output text)" || { echo "could not read the API key (AWS credentials expired?)" >&2; exit 1; }
 fi
 
-# 1. photo key: an existing S3 key, a local file to upload, or a test image name
-if [[ "$PHOTO" == photos/* ]]; then
+# 1. photo key: a day-8 test meal, an existing S3 key, a local file to upload, or a test image name
+if [[ "$PHOTO" == day8-* ]]; then
+  read -r KEY LISTED_TIME < <(python - "$ROOT/tests/integration/day8_meals.csv" "$PATIENT" "${PHOTO#day8-}" <<'EOF'
+import csv, sys
+path, patient, which = sys.argv[1:]
+rows = [r for r in csv.DictReader(open(path, encoding="utf8")) if r["patient"] == patient]
+pick = [r for r in rows if (r["n"] == which if which.isdigit() else r["meal_type"] == which)][:1]
+if not pick:
+    sys.exit(f"no day-8 meal '{which}' for {patient} in {path}; listed: " + ", ".join(f"{r['n']} {r['meal_type']} {r['meal_time']}" for r in rows))
+print(pick[0]["photo_key"], pick[0]["meal_time"])
+EOF
+  )
+  [ -n "${KEY:-}" ] || exit 1
+  MEAL_TIME="${MEAL_TIME:-$(printf %s "$LISTED_TIME" | tr -d '[:cntrl:]')}"     # Windows Python ends lines with CRLF
+
+elif [[ "$PHOTO" == photos/* ]]; then
   KEY="$PHOTO"
 elif [ -f "$PHOTO" ]; then
   RESP="$(mktemp)"
@@ -37,6 +58,8 @@ elif [ -f "$PHOTO" ]; then
 else
   KEY="photos/test/hospital-meals/${PHOTO%.jpg}.jpg"
 fi
+
+[ -n "$MEAL_TIME" ] || { echo "meal time missing, e.g. 2020-03-18T12:30:00" >&2; exit 1; }
 
 # 2. predict
 mkdir -p "$ROOT/tests/integration/out"
@@ -59,5 +82,10 @@ print(f"glucose     before {d['pre_meal_state']['glucose_mgdl']:.0f} -> peak {p[
 print("at minutes  " + "  ".join(f"{k}: {v:.0f}" for k, v in p["glucose_at_min"].items()))
 print(f"P(peak>140) {p['prob_peak_above_mgdl']['140']:.0%}   P(peak>180) {p['prob_peak_above_mgdl']['180']:.0%}")
 print(f"confidence  {c['level']}" + (f" ({'; '.join(c['flags'])})" if c["flags"] else ""))
+o = d.get("observed")
+if o:
+    print(f"observed    before {o['pre_meal_glucose_mgdl']:.0f} -> peak {o['peak_glucose_mgdl']:.0f} mg/dL (+{o['peak_rise_mgdl']:.0f}) "
+          f"at {o['time_to_peak_min']:.0f} min, {o['share_of_curve_inside_band80']:.0%} of the curve inside the 80% band")
+    print("at minutes  " + "  ".join(f"{k}: {v:.0f}" for k, v in o["glucose_at_min"].items()))
 print(f"full JSON   {sys.argv[1]}")
 EOF

@@ -42,9 +42,12 @@ Result on 2026-10-10 (DynamoDB + S3 store): 13/13 checks passed; about 315 ms pe
 ## 3. One prediction
 
 ```bash
-./scripts/predict.sh <patient> <photo> <meal time>
+./scripts/predict.sh <patient> <photo> [<meal time>] [--log]
+./scripts/predict.sh cgmacros-003 day8-lunch          # the patient's real day-8 lunch: prediction + observed curve
 ./scripts/predict.sh cgmacros-003 korea_snuh_evening_meal 2020-03-18T12:30:00
 ```
+
+Output of the hospital-photo call (no `observed` lines; a `day8-...` call adds them):
 
 ```
 patient     cgmacros-003   meal time 2020-03-18 12:30:00 (lunch)
@@ -58,22 +61,38 @@ confidence  high
 ```
 
 - `<patient>`: one of the onboarded patients (section 4).
-- `<photo>`: a test image already in S3 (`korea_snuh_evening_meal`, `us_chicken_penne_greens`,
-  `germany_cabbage_roll_mash`, `germany_greek_salad_pita`, `israel_hospital_meal`, stored under
-  `s3://nutrix-input-images/photos/test/hospital-meals/`), any S3 key `photos/...`, or a local `.jpg` (uploaded first).
+- `<photo>`, one of:
+  - `day8-<meal type>` (`day8-breakfast`, `day8-lunch`, `day8-dinner`, `day8-snack`: the first of that type) or
+    `day8-<n>` (the n-th meal of the day): the patient's own day-8 meal photo, listed in
+    `tests/integration/day8_meals.csv` with its time (section 4). Use these for predicted vs observed.
+  - a hospital test image already in S3 (`korea_snuh_evening_meal`, `us_chicken_penne_greens`,
+    `germany_cabbage_roll_mash`, `germany_greek_salad_pita`, `israel_hospital_meal`, stored under
+    `s3://nutrix-input-images/photos/test/hospital-meals/`): foods the model has never seen, but not what the patient
+    ate at that time, so there is nothing real to compare against.
+  - any S3 key `photos/...`, or a local `.jpg` (uploaded first).
 - `<meal time>`: local time within the patient's record (before `CGM until` in section 4), with CGM in the 30 min before.
+  Taken from the list for `day8-...`; required otherwise.
 - Add `--log` to record the meal in the patient's food log (`log_meal=true`: later predictions see it as the previous
   meal). Without it the call is a preview and changes nothing, so you can compare several photos at the same time.
 - The API key is read from Secrets Manager unless `PMRF_API_KEY` is set. Errors print the service's reason.
   Full JSON: `tests/integration/out/predict_<patient>.json`.
 
-The same call with curl (the photo is already in S3, so no upload):
+The same call with curl: cgmacros-003's real day-8 lunch. Its photo is already in S3; the key changes whenever the
+patient is onboarded again, so take it (and the meal time) from `tests/integration/day8_meals.csv`:
 
 ```bash
-# predict
+# predict: photo key and meal time of cgmacros-003's day-8 lunch
+read -r KEY TIME < <(awk -F, '$1=="cgmacros-003" && $5=="lunch" {print $6, $4; exit}' tests/integration/day8_meals.csv)
 curl -s -H "x-api-key: $PMRF_API_KEY" -H "content-type: application/json" \
-  -d '{"photo_key":"photos/test/hospital-meals/korea_snuh_evening_meal.jpg","meal_time":"2020-03-18T12:30:00","log_meal":false}' \
-  $API/v1/people/cgmacros-003/predict | python -m json.tool | head -60
+  -d "{\"photo_key\":\"$KEY\",\"meal_time\":\"$TIME\",\"log_meal\":false}" \
+  $API/v1/people/cgmacros-003/predict > out.json
+
+# predicted vs observed, side by side
+python -c "
+import json; d = json.load(open('out.json')); p, o = d['prediction'], d['observed']
+for k in ('30', '60', '90', '120'): print(f'glucose at {k:>3} min   {p[\"glucose_at_min\"][k]:6.0f} {o[\"glucose_at_min\"][k]:6.0f}')
+for k in ('peak_glucose_mgdl', 'peak_rise_mgdl', 'time_to_peak_min', 'iauc_0_120_mgdl_min'): print(f'{k:<20} {p[k]:6.0f} {o[k]:6.0f}')
+"
 
 # profile
 curl -s -H "x-api-key: $PMRF_API_KEY" $API/v1/people/cgmacros-003/profile | python -m json.tool
@@ -90,6 +109,25 @@ It draws `prediction.curve` (`minutes` 0–120 in 5-min steps, `glucose_mgdl`, 8
 140 / 180 mg/dL lines with their probabilities, and the predicted peak. The peak is predicted on its own, not read off
 the curve, so it usually sits above the curve's top: the curve is an average and smooths the peak out.
 
+### Predicted vs observed
+
+When the store already holds CGM for the two hours after `meal_time` (true for the onboarded patients in section 4,
+whose later CGM is uploaded), the response also has `observed`: the real curve and outcomes after the meal, added by
+`server/observed.py` with the same definitions the model was trained on. The prediction itself still only sees data
+up to the meal time. Without that CGM (a live meal) the field is absent.
+
+| Field | Meaning |
+| --- | --- |
+| `observed.curve` | `minutes` 0–120 (5-min steps) and the real `glucose_mgdl` |
+| `observed.glucose_at_min`, `peak_glucose_mgdl`, `peak_rise_mgdl`, `time_to_peak_min`, `iauc_0_120_mgdl_min` | The same outcomes as `prediction`, measured |
+| `observed.pre_meal_glucose_mgdl` | Glucose at the meal time |
+| `observed.cgm_coverage` | Share of minutes 0–120 with a CGM reading (at least 0.9 in −30…120 min is required) |
+| `observed.share_of_curve_inside_band80` | Share of the 25 curve points inside the predicted 80% band |
+
+`predict.sh` prints the observed outcomes and `plot_prediction.py` draws the observed curve plus a predicted / observed
+/ error table. The comparison is only meaningful when the photo is the meal actually eaten at that time, so use the
+`day8-...` meals; a hospital test photo at an arbitrary time is compared with whatever the patient really ate.
+
 What to look at in the prediction:
 
 | Field | Meaning |
@@ -104,8 +142,9 @@ run; use the patients in section 4 for demos.
 
 ## 4. Onboarded patients
 
-Six CGMacros participants are stored as patients, two per group, with week 1 as history and all later CGM and heart
-rate uploaded, so predictions work at any time up to `cgm_until`:
+Six CGMacros participants are stored as patients, two per group, with week 1 as history and all later CGM, heart
+rate and logged meals uploaded, so predictions work at any time up to `cgm_until` and see that day's earlier meals as
+previous meals (as in training):
 
 | Patient | Group | Usable week-1 meals | CGM until |
 | --- | --- | --- | --- |
@@ -117,6 +156,13 @@ rate uploaded, so predictions work at any time up to `cgm_until`:
 | `cgmacros-005` | T2D | 23 | 2020-08-27 10:37 |
 
 Predict for one of them with `./scripts/predict.sh` (section 3).
+
+Day-8 test meals: onboarding also uploads each patient's own day-8 meal photos that have enough CGM around them (a
+reading at the meal time and at least 90% of minutes −30…+120, the training rule) and lists them in
+`tests/integration/day8_meals.csv`: `patient`, `n` (order in the day), `meal_time`, `meal_type`, `photo_key`, logged
+macros and the observed peak rise. 24 meals across the six patients: 002 has 4, 004 has 8, 007 none (its only day-8
+meal lacks CGM), 008 has 2, 003 has 4, 005 has 6. Re-onboarding uploads the photos again under new keys and rewrites
+those patients' rows.
 Add or refresh patients (re-running replaces their history), optionally comparing one photo across all of them at
 the same study day and time:
 
