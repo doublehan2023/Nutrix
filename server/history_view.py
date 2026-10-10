@@ -16,7 +16,7 @@ from pmrf.state import CGM_INTERP_LIMIT_MIN, SIGNAL_COLUMNS, _naive, assemble_pe
 from server.observed import _r, observed_outcome
 
 DAY = pd.Timedelta(days=1)
-HR_BIN = "5min"
+BIN = "5min"
 TIR_LOW, TIR_HIGH = 70, 180
 
 
@@ -50,6 +50,10 @@ def _glucose_stats(v):
                 time_in_range_pct=_r(100 * np.mean((v >= TIR_LOW) & (v <= TIR_HIGH))))
 
 
+def _bins(df, key, col):
+    return df.set_index(key)[col].astype(float).resample(BIN).mean().dropna() if len(df) else pd.Series(dtype=float)
+
+
 def _overlaps(d, start, end):
     return bool(d < end and d + DAY > start)
 
@@ -79,7 +83,8 @@ def day_view(store, pid, date, photo_url=lambda key: None):
 
     cgm = s["cgm"].assign(timestamp=_naive(s["cgm"].timestamp)).dropna(subset=["glucose_mgdl"]).sort_values("timestamp")
     hr = s["hr"].assign(timestamp=_naive(s["hr"].timestamp)).dropna(subset=["hr_bpm"])
-    hr5 = hr.set_index("timestamp").hr_bpm.astype(float).resample(HR_BIN).mean().dropna() if len(hr) else pd.Series(dtype=float)
+    cgm5 = _bins(cgm, "timestamp", "glucose_mgdl")
+    hr5 = _bins(hr, "timestamp", "hr_bpm")
     meals = s["meals"].assign(time=_naive(s["meals"].time)).sort_values("time")
     meds = s["meds"].assign(time=_naive(s["meds"].time)).sort_values("time")
 
@@ -101,7 +106,7 @@ def day_view(store, pid, date, photo_url=lambda key: None):
                       in_history_window=bool(start <= m.time < end), observed=obs.get(i))
                  for i, m in meals.iterrows()]
     return dict(person_id=pid, date=date, in_history_window=_overlaps(d, start, end), summary=_glucose_stats(cgm.glucose_mgdl),
-                cgm=[dict(t=_iso(t), mgdl=_r(v)) for t, v in zip(cgm.timestamp, cgm.glucose_mgdl)],
+                cgm=[dict(t=_iso(t), mgdl=_r(v)) for t, v in cgm5.items()],
                 hr=[dict(t=_iso(t), bpm=_r(v)) for t, v in hr5.items()],
                 meals=meal_rows,
                 meds=[dict(time=_iso(m.time), med_class=m.med_class, dose=_r(m.dose, 2)) for m in meds.itertuples()])
