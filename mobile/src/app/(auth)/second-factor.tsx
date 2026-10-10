@@ -12,18 +12,24 @@ import {
 } from "@/components/auth/auth-ui";
 import { messageForClerkError } from "@/auth/clerk-error";
 
-function factorDescription(factor: { strategy: string; safeIdentifier?: string }) {
+function factorDescription(factor: {
+  strategy: string;
+  safeIdentifier?: string;
+}) {
   return `${factor.strategy.replace("_", " ")}${factor.safeIdentifier ? ` (${factor.safeIdentifier})` : ""}`;
 }
 
 export default function SecondFactorScreen() {
   const { signIn, fetchStatus } = useSignIn();
   const factors = (signIn.supportedSecondFactors ?? []).filter((factor) =>
-    ["email_code", "phone_code", "totp", "backup_code"].includes(factor.strategy),
+    ["email_code", "phone_code", "totp", "backup_code"].includes(
+      factor.strategy,
+    ),
   );
   const [selectedStrategy, setSelectedStrategy] = useState("");
   const selectedFactor =
-    factors.find((factor) => factor.strategy === selectedStrategy) ?? factors[0];
+    factors.find((factor) => factor.strategy === selectedStrategy) ??
+    factors[0];
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [error, setError] = useState<string>();
