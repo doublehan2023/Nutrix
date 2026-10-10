@@ -70,9 +70,13 @@ confidence  high
 The same call with curl (the photo is already in S3, so no upload):
 
 ```bash
-curl -s -H "x-api-key: $PMRF_API_KEY" -H "content-type: application/json"   -d '{"photo_key":"photos/test/hospital-meals/korea_snuh_evening_meal.jpg","meal_time":"2020-03-18T12:30:00","log_meal":false}'   $API/v1/people/cgmacros-003/predict | python -m json.tool | head -60
+# predict
+curl -s -H "x-api-key: $PMRF_API_KEY" -H "content-type: application/json" \
+  -d '{"photo_key":"photos/test/hospital-meals/korea_snuh_evening_meal.jpg","meal_time":"2020-03-18T12:30:00","log_meal":false}' \
+  $API/v1/people/cgmacros-003/predict | python -m json.tool | head -60
 
-curl -s -H "x-api-key: $PMRF_API_KEY" $API/v1/people/cgmacros-003/profile | python -m json.tool   # profile
+# profile
+curl -s -H "x-api-key: $PMRF_API_KEY" $API/v1/people/cgmacros-003/profile | python -m json.tool
 ```
 
 What to look at in the prediction:
@@ -106,7 +110,8 @@ Add or refresh patients (re-running replaces their history), optionally comparin
 the same study day and time:
 
 ```bash
-python -I ops/data/onboard_patients.py $API data/CGMacros 002 004 007 008 003 005   --compare-photo tests/integration/hospital_meals/korea_snuh_evening_meal.jpg --day 8 --time 12:30
+python -I ops/data/onboard_patients.py $API data/CGMacros 002 004 007 008 003 005 \
+  --compare-photo tests/integration/hospital_meals/korea_snuh_evening_meal.jpg --day 8 --time 12:30
 ```
 
 Same Korean hospital meal at day 8, 12:30 (2026-10-10): predicted rise from +31 mg/dL (`cgmacros-005`) to +66 mg/dL
