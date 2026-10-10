@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   PMRF prediction service: API Gateway (HTTP API) -> VPC link -> internal ALB -> ECS Fargate (2 vCPU / 4 GB),
-  person data on EFS at /data, meal photos in S3. Layout follows model/DEPLOY.md. Deployed by scripts/deploy.sh.
+  person data on DynamoDB + S3 (server/store.py), meal photos in S3. Deployed by scripts/deploy.sh.
 
 Parameters:
   ImageUri:
@@ -13,7 +13,7 @@ Parameters:
     Type: AWS::EC2::Subnet::Id
   SubnetB:
     Type: AWS::EC2::Subnet::Id
-    Description: Must be in a different AZ from SubnetA (ALB and EFS need two)
+    Description: Must be in a different AZ from SubnetA (the ALB needs two)
   PhotoBucket:
     Type: String
     Default: nutrix-input-images
@@ -57,46 +57,33 @@ Resources:
           FromPort: 8080
           ToPort: 8080
           SourceSecurityGroupId: !Ref AlbSG
-  EfsSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: EFS, reachable only from the tasks
-      VpcId: !Ref VpcId
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 2049
-          ToPort: 2049
-          SourceSecurityGroupId: !Ref TaskSG
 
-  # ---------- Person data (signals + first-week states)
-  FileSystem:
-    Type: AWS::EFS::FileSystem
+  # ---------- Person data on DynamoDB (meta + daily signal chunks) and S3 (first-week states); see server/store.py
+  PeopleTable:
+    Type: AWS::DynamoDB::Table
     Properties:
-      Encrypted: true
-      PerformanceMode: generalPurpose
-      FileSystemTags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-data
-  MountTargetA:
-    Type: AWS::EFS::MountTarget
+      TableName: nutrix-people
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: pid, AttributeType: S}
+        - {AttributeName: sk, AttributeType: S}
+      KeySchema:
+        - {AttributeName: pid, KeyType: HASH}
+        - {AttributeName: sk, KeyType: RANGE}
+      SSESpecification: {SSEEnabled: true}
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+  StateBucket:
+    Type: AWS::S3::Bucket
     Properties:
-      FileSystemId: !Ref FileSystem
-      SubnetId: !Ref SubnetA
-      SecurityGroups: [!Ref EfsSG]
-  MountTargetB:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId: !Ref FileSystem
-      SubnetId: !Ref SubnetB
-      SecurityGroups: [!Ref EfsSG]
-  AccessPoint:
-    Type: AWS::EFS::AccessPoint
-    Properties:
-      FileSystemId: !Ref FileSystem
-      PosixUser: {Uid: "10001", Gid: "10001"}        # the image's non-root user
-      RootDirectory:
-        Path: /pmrf
-        CreationInfo: {OwnerUid: "10001", OwnerGid: "10001", Permissions: "0750"}
+      BucketName: nutrix-person-state
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
 
   # ---------- Load balancer (internal)
   Alb:
@@ -173,7 +160,7 @@ Resources:
             Principal: {Service: ecs-tasks.amazonaws.com}
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: photos-and-efs
+        - PolicyName: photos-and-person-data
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -181,11 +168,12 @@ Resources:
                 Action: [s3:GetObject, s3:PutObject]
                 Resource: !Sub arn:aws:s3:::${PhotoBucket}/photos/*
               - Effect: Allow
-                Action: [elasticfilesystem:ClientMount, elasticfilesystem:ClientWrite]
-                Resource: !GetAtt FileSystem.Arn
-                Condition:
-                  StringEquals:
-                    elasticfilesystem:AccessPointArn: !GetAtt AccessPoint.Arn
+                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:DeleteItem,
+                         dynamodb:Query, dynamodb:BatchWriteItem]
+                Resource: !GetAtt PeopleTable.Arn
+              - Effect: Allow
+                Action: [s3:GetObject, s3:PutObject]
+                Resource: !Sub ${StateBucket.Arn}/*
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -197,26 +185,19 @@ Resources:
       RuntimePlatform: {CpuArchitecture: X86_64, OperatingSystemFamily: LINUX}
       ExecutionRoleArn: !GetAtt ExecutionRole.Arn
       TaskRoleArn: !GetAtt TaskRole.Arn
-      Volumes:
-        - Name: data
-          EFSVolumeConfiguration:
-            FilesystemId: !Ref FileSystem
-            TransitEncryption: ENABLED
-            AuthorizationConfig:
-              AccessPointId: !Ref AccessPoint
-              IAM: ENABLED
       ContainerDefinitions:
         - Name: pmrf
           Image: !Ref ImageUri
           Essential: true
           PortMappings: [{ContainerPort: 8080, Protocol: tcp}]
-          MountPoints: [{SourceVolume: data, ContainerPath: /data}]
           Environment:
-            - {Name: PMRF_DATA_DIR, Value: /data}
+            - {Name: PMRF_DATA_DIR, Value: /tmp/pmrf}          # unused: person data is on DynamoDB + S3
             - {Name: PMRF_PHOTO_BUCKET, Value: !Ref PhotoBucket}
             - {Name: AWS_REGION, Value: !Ref AWS::Region}
             - {Name: PMRF_THREADS, Value: "2"}
             - {Name: PMRF_MAX_CONCURRENT, Value: "2"}
+            - {Name: PMRF_TABLE, Value: !Ref PeopleTable}
+            - {Name: PMRF_STATE_BUCKET, Value: !Ref StateBucket}
           Secrets:
             - {Name: PMRF_API_KEY, ValueFrom: !Ref ApiKeySecret}
           LogConfiguration:
@@ -227,7 +208,7 @@ Resources:
               awslogs-stream-prefix: pmrf
   Service:
     Type: AWS::ECS::Service
-    DependsOn: [Listener, MountTargetA, MountTargetB]
+    DependsOn: [Listener]
     Properties:
       Cluster: !Ref Cluster
       LaunchType: FARGATE
@@ -298,3 +279,7 @@ Outputs:
     Value: !GetAtt Service.Name
   LogGroup:
     Value: !Ref LogGroup
+  PeopleTable:
+    Value: !Ref PeopleTable
+  StateBucket:
+    Value: !Ref StateBucket

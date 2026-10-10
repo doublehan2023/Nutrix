@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# One-command deploy: build the image, push it to ECR, create/update the CloudFormation stack (infra/pmrf.yaml),
+# One-command deploy: build the image (model image + server/), push it to ECR, create/update the CloudFormation stack (infra/pmrf.yaml),
 # wait for ECS to roll out, then check /healthz through API Gateway.
 #   ./scripts/deploy.sh [version]          # default: $MODEL_VERSION or v4-20261010
-# Env: AWS_PROFILE (nutrix), AWS_REGION (us-west-2), STACK (pmrf), SKIP_BUILD=1 to push the existing local image
+# Env: AWS_PROFILE (nutrix), AWS_REGION (us-west-2), STACK (pmrf), SKIP_BUILD=1 to reuse the local model image
 set -euo pipefail
 # Windows installs that a shell opened before installation may not have on PATH
 for d in "/c/Program Files/Amazon/AWSCLIV2" "/c/Program Files/Docker/Docker/resources/bin"; do
@@ -25,8 +25,10 @@ aws ecr describe-repositories --repository-names "$REPO" >/dev/null 2>&1 ||
   aws ecr create-repository --repository-name "$REPO" --image-scanning-configuration scanOnPush=true >/dev/null
 
 echo "==> image $IMAGE"
-[ "${SKIP_BUILD:-0}" = 1 ] || "$ROOT/scripts/build.sh" "$VERSION"
-docker tag "pmrf-api:$VERSION" "$IMAGE"
+[ "${SKIP_BUILD:-0}" = 1 ] || "$ROOT/scripts/build.sh" "$VERSION"          # model team's image (model/deploy/Dockerfile)
+# + server/: person data on DynamoDB + S3 instead of files
+docker build --platform linux/amd64 -q -f "$ROOT/server/Dockerfile" --build-arg BASE_IMAGE="pmrf-api:$VERSION"   -t "pmrf-aws:$VERSION" "$ROOT" >/dev/null
+docker tag "pmrf-aws:$VERSION" "$IMAGE"
 aws ecr get-login-password | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
 docker push "$IMAGE" | tail -1
 
