@@ -1,158 +1,158 @@
-# Nutrix
+<h1 align="center">Nutrix</h1>
 
-Rutgers Health Hack 2026. Predicts a person's post-meal glucose curve from a meal photo, their recent CGM and heart rate,
-and their first week of data (PMRF model).
+<p align="center"><b>Snap a photo of your meal. See what it will do to your blood sugar before you eat it.</b></p>
 
-## Deployment architecture
+<p align="center">
+  <a href="https://github.com/doublehan2023/Nutrix/actions/workflows/ci.yml"><img src="https://github.com/doublehan2023/Nutrix/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/python-3.11-blue" alt="Python 3.11">
+  <img src="https://img.shields.io/badge/AWS-ECS%20Fargate-orange" alt="AWS ECS Fargate">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license"></a>
+</p>
 
-Live on AWS (us-west-2) as one CloudFormation stack (`infra/pmrf.yaml`), deployed with `scripts/deploy.sh`. Person data is on DynamoDB + S3. Request path, security boundaries and release steps: [docs/architecture.md](docs/architecture.md).
+Nutrix predicts a person's glucose curve for the two hours after a meal, from a photo of the meal and their own data.
+It learns how each body responds from the user's first week of continuous glucose (CGM), heart-rate and meal data,
+so the same plate gets a different prediction for different people.
 
-```mermaid
-flowchart LR
-    app["Mobile app"]
-    dev["Developer laptop<br/>scripts/deploy.sh"]
-    gh["GitHub Actions<br/>lint + image build<br/>(no AWS access)"]
+Built at Rutgers Health Hack 2026 (Wellness Reimagined, Challenge #3).
 
-    subgraph aws["AWS account · us-west-2 · stack pmrf"]
-        apigw["API Gateway<br/>HTTP API<br/>throttle 10 req/s"]
-        secret[("Secrets Manager<br/>pmrf/api-key")]
-        ecr[("ECR<br/>pmrf-api")]
-        logs[("CloudWatch Logs<br/>/ecs/pmrf · 14 days")]
+## What you get for every meal
 
-        subgraph vpc["Default VPC · 2 AZs"]
-            link["VPC link"]
-            alb["Internal ALB<br/>:80 → health /healthz"]
-            task["ECS Fargate task<br/>FastAPI · 2 vCPU / 4 GB<br/>model v7-20261010 baked in<br/>+ server/ store layer"]
-        end
+- **The glucose curve** for the next two hours, with an 80% range: glucose at 30, 60, 90 and 120 minutes, the peak and
+  when it happens
+- **The risk of a spike**: the chance of going above 140 and 180 mg/dL
+- **What the photo shows**: recognised food and estimated carbs, protein, fat and calories
+- **Why**: the factors that pushed the prediction up or down, and the user's own past meals that looked most alike
+- **What if**: the same meal with half the carbs, extra protein or fiber, or a double portion
+- **How sure the model is**, with plain-language reasons when it is less sure
 
-        ddb[("DynamoDB nutrix-people<br/>meta + daily CGM / HR /<br/>meal / med chunks")]
-        state[("S3 nutrix-person-state<br/>first-week state<br/>&lt;person&gt;/*.parquet, npz, json")]
-        photos[("S3 nutrix-input-images<br/>photos/&lt;person&gt;/…")]
-        models[("S3 nutrix-models<br/>models/&lt;version&gt;/")]
-    end
+<p align="center"><img src="docs/images/case_example.png" alt="One real meal: prediction breakdown, similar past meals and predicted vs actual glucose" width="900"></p>
 
-    app -- "HTTPS + x-api-key<br/>/v1/people/{id}/…" --> apigw
-    app -- "presigned PUT<br/>(photo upload)" --> photos
-    apigw --> link --> alb --> task
-    task -- "signals, meta" --> ddb
-    task -- "first-week state" --> state
-    task -- "GetObject / PutObject<br/>photos/* only" --> photos
-    task --> logs
-    secret -. "PMRF_API_KEY at start" .-> task
-    ecr -. "image pull" .-> task
-    dev -- "docker push" --> ecr
-    dev -- "fetch_model.sh" --> models
-    dev -- "cloudformation deploy" --> aws
-```
+## How it works
 
-## Layout
+1. **Learn the person (days 1–7).** From the first week the model builds a personal profile: how much this user's
+   glucose usually rises, how strongly it reacts to carbohydrate, their typical glucose and resting heart rate.
+2. **Read the meal.** A photo model (MobileCLIP-S2) recognises the food and estimates its nutrition.
+3. **Predict.** Two models are combined: a LightGBM model that weighs the meal, the glucose and heart rate just before
+   it, earlier meals, activity and the personal profile; and a transformer that reads the user's first-week glucose
+   curves directly, so a new user needs no retraining.
 
-| Path | What | Owner |
-| --- | --- | --- |
-| `mobile/` | Expo / React Native app (Clerk sign-in, see Authentication below) | App team |
-| `services/clerk-role-webhook/` | Lambda that gives new sign-ups the Patient role | App team |
-| `model/` | PMRF model code, FastAPI service, Dockerfile, model docs (`model/DEPLOY.md`, `model/docs/api_contract.md`). Synced from `feature/model`; do not edit here | Model team |
-| `scripts/` | Build, test and deploy entry points | Deployment |
-| `ops/data/` | Dataset sync with S3 and test-photo selection | Deployment |
-| `tests/integration/` | Tests against a running service: day-8 meals of the onboarded patients (`day8_meals.csv`) and unseen hospital meal photos | Deployment |
-| `docs/` | [API reference](docs/api.md), [deployment architecture](docs/architecture.md), [testing the deployed API](docs/testing_api.md) and notes: AWS account, buckets, model artifacts, decisions | Deployment |
-| `infra/` | CloudFormation stack for the service (API Gateway, ALB, ECS Fargate, DynamoDB, S3) | Deployment |
-| `server/` | AWS image layer: runs the model service with person data on DynamoDB + S3 (`model/` unchanged) | Deployment |
-| `.github/workflows/` | CI: lint and image build, no AWS access | Deployment |
+On 168 real day-8 meals from 43 study participants, the predicted rise in glucose was off by 17.5 mg/dL on average
+(median 12.2), against 29.0 for predicting the average rise every time. Factors learned from the user's own first week
+account for 40% of what drives a prediction, more than the meal itself.
 
-## Run the service locally
+<p align="center"><img src="docs/images/feature_importance.png" alt="What drives the predicted glucose rise, overall and by group" width="900"></p>
 
-Needs the AWS CLI (profile `nutrix` with the event account's temporary credentials), Docker and Python 3.11.
+## Architecture
+
+The prediction service runs on AWS, defined in one CloudFormation template and deployed with one script.
+
+<p align="center"><img src="docs/images/architecture.png" alt="Nutrix deployment on AWS" width="900"></p>
+
+- **API Gateway** is the one public entry point and limits traffic.
+- The service runs as a container on **ECS Fargate** behind an internal load balancer; firewall rules let nothing else
+  reach it.
+- Mobile users sign in with **Clerk**; the service checks each sign-in, so users only reach their own data.
+- Readings live in **DynamoDB**, photos and first-week profiles in **S3**, all encrypted.
+- Health checks gate every release, and a failed release rolls back automatically.
+
+Request path, data layout and security boundaries: [docs/architecture.md](docs/architecture.md).
+
+## Getting started
+
+**Prerequisites:** AWS CLI with credentials, Docker, Python 3.11, Node.js (mobile app), a Clerk account. The study
+datasets and trained model files are stored in S3, so the download steps need access to that AWS account.
+
+**1. Install**
 
 ```bash
-pip install -r requirements.txt   # Python packages for the scripts and tests (the image installs its own subset)
-cp .env.example .env              # set PMRF_API_KEY
-set -a; . ./.env; set +a
-./ops/data/sync_data.sh pull      # datasets -> data/ (integration tests use data/CGMacros)
-./scripts/fetch_model.sh          # model files -> model/deploy/model_store/<version>, checksums verified
-./scripts/build.sh                # image pmrf-api:<version>
+git clone https://github.com/doublehan2023/Nutrix.git && cd Nutrix
+pip install -r requirements.txt     # all Python packages
+cp .env.example .env                # fill in the Clerk settings
+set -a; . ./.env; set +a            # load the settings for the scripts below
+./ops/data/sync_data.sh pull        # study datasets from S3 -> data/
+./scripts/fetch_model.sh            # trained model files from S3, checked against their checksums
+```
+
+**2. Run locally (optional)**
+
+```bash
+./scripts/build.sh                  # service image pmrf-api:<model version>
 docker run --rm --cpus 2 --memory 4g -p 8080:8080 -e PMRF_API_KEY pmrf-api:$MODEL_VERSION
 curl localhost:8080/healthz
 ```
 
-## Deploy to AWS
+**3. Deploy to AWS**
 
 ```bash
-set -a; . ./.env; set +a          # AWS profile, model version, CLERK_JWT_ISSUER / CLERK_JWT_AUDIENCE (required)
-./scripts/deploy.sh               # image -> ECR, CloudFormation stack create/update, waits for health checks, prints the API URL
-python -I ops/data/onboard_patients.py <api-url> data/CGMacros <ids...>   # load CGMacros participants as cgmacros-<id>
+./scripts/deploy.sh
 ```
 
-`deploy.sh` tags the image with the model version and the git commit, so commit first. The first deploy takes about 10 minutes; a
-release that fails its health checks rolls back automatically. `SKIP_BUILD=1` reuses a local model image.
+Builds the image, pushes it to ECR, creates or updates the CloudFormation stack, waits for the new version to pass
+its health checks and prints the API address. The image is tagged with the model version and the git commit, so
+commit first. The first deploy takes about 10 minutes; `SKIP_BUILD=1` reuses a local model image. A new AWS account
+needs, once: the model files in an S3 bucket (`scripts/fetch_model.sh` reads `s3://nutrix-models/models/<version>/`), an
+S3 bucket for meal photos (template parameter `PhotoBucket`), and free bucket names (S3 names are global;
+`nutrix-person-state` is set in `infra/pmrf.yaml`).
 
-A new AWS account needs, once: the model files in an S3 bucket (`scripts/fetch_model.sh` reads `s3://nutrix-models/models/<version>/`),
-an S3 bucket for meal photos (template parameter `PhotoBucket`), and bucket names that are free (S3 names are global;
-`nutrix-person-state` is set in `infra/pmrf.yaml`). Details: [docs/architecture.md](docs/architecture.md).
+**4. Onboard users**
+
+```bash
+python -I ops/data/onboard_patients.py <api-url> data/CGMacros <ids...>
+```
+
+Uploads each user's first week (meal photos, CGM, heart rate, activity) and builds their personal profile. For the
+demo users, CGMacros study participants `cgmacros-<id>`, it also loads their later readings, which stand in for the
+live readings a real user's sensor would send.
+
+**5. Predict a meal from a photo**
+
+```bash
+./scripts/predict.sh <user-id> <photo.jpg> <meal time>
+# e.g. ./scripts/predict.sh cgmacros-003 lunch.jpg 2020-03-18T12:30:00
+```
+
+The model uses the glucose readings from just before the meal, so for demo users the meal time falls within their
+study dates. The app makes the same call through the API: [docs/api.md](docs/api.md).
+
+**6. Mobile app**
+
+```bash
+cd mobile && npm ci && npx expo start
+```
+
+Needs `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` in `mobile/.env`. Clerk roles and the patient-role webhook:
+[docs/mobile_setup.md](docs/mobile_setup.md).
 
 ## Tests
 
-Against the deployed API: [docs/testing_api.md](docs/testing_api.md).
-
 ```bash
-./scripts/test.sh                                   # static checks (same as CI)
-./scripts/test_integration.sh http://localhost:8080 # API flow + hospital meal photos
+./scripts/test.sh                          # static checks, the same as CI
+./scripts/test_integration.sh <api-url>    # end-to-end flow against a running service + unseen hospital meal photos
 ```
 
-## Authentication
+GitHub Actions runs the static checks and a Docker build on pull requests. More on testing the deployed API:
+[docs/testing_api.md](docs/testing_api.md).
 
-The Expo app in `mobile/` uses Clerk for email/password authentication and has three exclusive portal roles:
+## Repository layout
 
-- `Patient` — public, self-service email/password registration.
-- `Clinician` — invite-only account created by the Nutrix team.
-- `Admin` — invite-only account created by the Nutrix team.
+| Path | What | Owner |
+| --- | --- | --- |
+| `mobile/` | Expo / React Native app with Clerk sign-in | App team |
+| `services/clerk-role-webhook/` | Lambda that gives new sign-ups the patient role | App team |
+| `model/` | Model code, FastAPI service, Dockerfile, model docs ([model/README.md](model/README.md)). Synced from `feature/model`; do not edit here | Model team |
+| `server/` | AWS layer on the model service: person data on DynamoDB + S3, mobile sign-in gateway | Deployment |
+| `infra/` | CloudFormation stack (API Gateway, load balancer, ECS Fargate, DynamoDB, S3) | Deployment |
+| `scripts/` | Build, deploy, predict and test entry points | Deployment |
+| `ops/data/` | Dataset sync with S3, user onboarding, test-photo selection | Deployment |
+| `tests/integration/` | Tests against a running service: day-8 meals of the onboarded users, unseen hospital meal photos | Deployment |
+| `docs/` | [API reference](docs/api.md), [architecture](docs/architecture.md), [testing the API](docs/testing_api.md), [mobile setup](docs/mobile_setup.md) | Deployment |
 
-The Admin / Clinician / Patient selector is a portal check, not a way to choose access. An account that signs in through a different portal is immediately signed out and shown an authorization error.
+## Data
 
-### Mobile setup
+Development and evaluation use the [CGMacros](https://physionet.org/content/cgmacros/) dataset (PhysioNet): continuous
+glucose, heart rate, activity and meal photos with logged nutrition from people who are healthy, have prediabetes or
+type 2 diabetes. The meal photos in this README come from that dataset. Other training data: [model/README.md](model/README.md).
 
-1. In the Clerk Dashboard, enable **Native API** under **Native applications**.
-2. Under **User & authentication**, enable **Email address**, **Password**, email-code verification, and first-name collection. First name is Nutrix's required display name.
-3. Create `mobile/.env` locally (it is ignored by Git):
+## License
 
-   ```env
-   EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-   ```
-
-4. Start the app:
-
-   ```bash
-   cd mobile
-   npm ci
-   npx expo start
-   ```
-
-Only the Clerk publishable key belongs in the Expo app. Never put `CLERK_SECRET_KEY` in a mobile build, an `.env` file that is committed, or any client-side code.
-
-### Provision an Admin or Clinician
-
-Before giving a staff member access:
-
-1. Create or invite their Clerk user from a trusted team process.
-2. Set `publicMetadata.role` to exactly `admin` or `clinician` using the Clerk Dashboard/Backend API. Never allow the mobile client to write this value.
-3. Verify the user can only enter through the matching Nutrix portal tab.
-4. Configure Clerk's session-token customization to add the role claim used by the AWS API. The AWS service must verify the Clerk JWT and authorize its role claim; it must not trust a role sent in a request body.
-
-Publicly registered users receive `publicMetadata.role: "patient"` through the trusted Clerk webhook in `services/clerk-role-webhook/`. The mobile app never writes public metadata. This makes the patient role visible in the Clerk Dashboard while preventing self-assignment of staff roles.
-
-### Patient role webhook
-
-Run `npm install && npm run build` in `services/clerk-role-webhook/`, then deploy its `dist/` directory with the production dependencies as a Node.js 20+ AWS Lambda. Set the Lambda handler to `index.handler` and expose it through a **Lambda Function URL** (public `POST` access is required for Clerk delivery). Configure these Lambda environment variables from secure secret storage, never from the Expo app:
-
-- `CLERK_SECRET_KEY` — Clerk Backend API secret key.
-- `CLERK_WEBHOOK_SIGNING_SECRET` — signing secret for this specific Clerk webhook endpoint.
-
-In Clerk Dashboard, create a webhook endpoint using the Lambda Function URL and subscribe it to `user.created`. The handler verifies the Clerk signature, then writes `publicMetadata.role: "patient"` with Clerk's Backend API. It preserves a pre-existing `admin` or `clinician` role created by a trusted backend.
-
-Webhook delivery is asynchronous. A just-created patient's role may appear in the Clerk Dashboard a moment after signup; the mobile app safely resolves an absent role as Patient during that brief interval.
-
-For a staff account created manually in the Dashboard, the webhook initially assigns `patient`. Before sending the invitation, overwrite the role with exactly `admin` or `clinician`; the mobile app and future AWS API then treat that staff role as authoritative.
-
-## AWS ML pipeline
-
-The ML pipeline can stay in AWS independently of Clerk. The Expo app sends the Clerk session token as `Authorization: Bearer <token>` to the AWS API. API Gateway/Lambda must verify its JWT signature, issuer, audience/authorized party, expiry, and role claim before invoking a pipeline or accessing data.
+[MIT](LICENSE)
