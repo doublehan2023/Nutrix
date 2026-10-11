@@ -21,7 +21,7 @@ credentials") into the `nutrix` profile with `aws configure set aws_access_key_i
 
 ```bash
 curl $API/healthz
-# {"status":"ok","model_version":"v4-20261010","api_version":"0.1"}
+# {"status":"ok","model_version":"v7-20261010","api_version":"0.1"}
 ```
 
 ## 2. Full test (recommended)

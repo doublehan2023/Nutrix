@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Predict one patient's glucose response to a meal photo, against the deployed API, in one command.
-#   ./scripts/predict.sh <patient> <photo> [<meal time YYYY-MM-DDTHH:MM:SS>] [--log]
+#   ./scripts/predict.sh <patient> <photo> [<meal time YYYY-MM-DDTHH:MM:SS>] [--kcal <logged kcal>] [--log]
 #   e.g. ./scripts/predict.sh cgmacros-003 day8-lunch
 #        ./scripts/predict.sh cgmacros-003 korea_snuh_evening_meal 2020-03-18T12:30:00
 # <photo> is one of:
@@ -13,6 +13,8 @@
 #   - a local .jpg file, uploaded first
 # Prints a summary; the full JSON goes to tests/integration/out/predict_<patient>.json.
 # --log records the meal in the patient's food log (log_meal=true); default is a preview that changes nothing.
+# --kcal sends the calories the user logged for the meal (logged_kcal); without it the service uses the calories estimated
+# from the photo. day8-* meals take them from the list.
 # Env: API (default: the live API), PMRF_API_KEY (default: read from Secrets Manager pmrf/api-key)
 set -euo pipefail
 for d in "/c/Program Files/Amazon/AWSCLIV2"; do [ -d "$d" ] && PATH="$d:$PATH"; done
@@ -21,9 +23,14 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PATIENT="${1:?usage: $0 <patient> <photo> <meal time> [--log]}"
 PHOTO="${2:?photo missing: day8-<meal type>, a test image name, an S3 key photos/... or a local .jpg}"
 shift 2
-LOG=false; MEAL_TIME=""
-for arg in "$@"; do
-  if [ "$arg" = "--log" ]; then LOG=true; else MEAL_TIME="$arg"; fi
+LOG=false; MEAL_TIME=""; KCAL=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --log) LOG=true ;;
+    --kcal) KCAL="${2:?--kcal needs a number}"; shift ;;
+    *) MEAL_TIME="$1" ;;
+  esac
+  shift
 done
 API="${API:-https://8la1c1eazd.execute-api.us-west-2.amazonaws.com}"
 
@@ -34,18 +41,20 @@ fi
 
 # 1. photo key: a day-8 test meal, an existing S3 key, a local file to upload, or a test image name
 if [[ "$PHOTO" == day8-* ]]; then
-  read -r KEY LISTED_TIME < <(python - "$ROOT/tests/integration/day8_meals.csv" "$PATIENT" "${PHOTO#day8-}" <<'EOF'
+  read -r KEY LISTED_TIME LISTED_KCAL < <(python - "$ROOT/tests/integration/day8_meals.csv" "$PATIENT" "${PHOTO#day8-}" <<'EOF'
 import csv, sys
 path, patient, which = sys.argv[1:]
 rows = [r for r in csv.DictReader(open(path, encoding="utf8")) if r["patient"] == patient]
 pick = [r for r in rows if (r["n"] == which if which.isdigit() else r["meal_type"] == which)][:1]
 if not pick:
     sys.exit(f"no day-8 meal '{which}' for {patient} in {path}; listed: " + ", ".join(f"{r['n']} {r['meal_type']} {r['meal_time']}" for r in rows))
-print(pick[0]["photo_key"], pick[0]["meal_time"])
+print(pick[0]["photo_key"], pick[0]["meal_time"], pick[0].get("logged_kcal") or "-")
 EOF
   )
   [ -n "${KEY:-}" ] || exit 1
   MEAL_TIME="${MEAL_TIME:-$(printf %s "$LISTED_TIME" | tr -d '[:cntrl:]')}"     # Windows Python ends lines with CRLF
+  LISTED_KCAL="$(printf %s "${LISTED_KCAL:--}" | tr -d '[:cntrl:]')"
+  [ "$LISTED_KCAL" = - ] || KCAL="${KCAL:-$LISTED_KCAL}"
 
 elif [[ "$PHOTO" == photos/* ]]; then
   KEY="$PHOTO"
@@ -65,7 +74,7 @@ fi
 mkdir -p "$ROOT/tests/integration/out"
 JSON="$ROOT/tests/integration/out/predict_$PATIENT.json"
 CODE="$(curl -s -o "$JSON" -w '%{http_code}' -H "x-api-key: $PMRF_API_KEY" -H "content-type: application/json" \
-  -d "{\"photo_key\":\"$KEY\",\"meal_time\":\"$MEAL_TIME\",\"log_meal\":$LOG}" "$API/v1/people/$PATIENT/predict")"
+  -d "{\"photo_key\":\"$KEY\",\"meal_time\":\"$MEAL_TIME\",\"log_meal\":$LOG${KCAL:+,\"logged_kcal\":$KCAL}}" "$API/v1/people/$PATIENT/predict")"
 [ "$CODE" = 200 ] || { echo "predict failed ($CODE): $(cat "$JSON")" >&2; exit 1; }
 
 python - "$JSON" "$KEY" <<'EOF'
@@ -74,6 +83,7 @@ d = json.load(open(sys.argv[1], encoding="utf8"))
 m, p, c = d["meal"], d["prediction"], d["confidence"]
 n = m["estimated_nutrition"]
 print(f"patient     {d['person_id']}   meal time {m['time']} ({m['meal_type']})")
+print(f"model       {d.get('model_version')}")
 print(f"photo       {sys.argv[2]}")
 print("photo tags  " + ", ".join(f"{t['label']} {t['p']:.0%}" for t in m["photo_tags"]))
 print(f"nutrition   carbs {n['carbs_g']:.0f} g (+/- {n['carbs_uncertainty_g']:.0f}), protein {n['protein_g']:.0f} g, fat {n['fat_g']:.0f} g, {n['kcal']:.0f} kcal")

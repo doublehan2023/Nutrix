@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-command deploy: build the image (model image + server/), push it to ECR, create/update the CloudFormation stack (infra/pmrf.yaml),
 # wait for ECS to roll out, then check /healthz through API Gateway.
-#   ./scripts/deploy.sh [version]          # default: $MODEL_VERSION or v4-20261010
+#   ./scripts/deploy.sh [version]          # default: $MODEL_VERSION or v7-20261010
 # Env: AWS_PROFILE (nutrix), AWS_REGION (us-west-2), STACK (pmrf), SKIP_BUILD=1 to reuse the local model image
 set -euo pipefail
 # Windows installs that a shell opened before installation may not have on PATH
@@ -10,7 +10,7 @@ for d in "/c/Program Files/Amazon/AWSCLIV2" "/c/Program Files/Docker/Docker/reso
 done
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="${1:-${MODEL_VERSION:-v4-20261010}}"
+VERSION="${1:-${MODEL_VERSION:-v7-20261010}}"
 export AWS_PROFILE="${AWS_PROFILE:-nutrix}" AWS_REGION="${AWS_REGION:-us-west-2}"
 STACK="${STACK:-pmrf}"
 REPO=pmrf-api
