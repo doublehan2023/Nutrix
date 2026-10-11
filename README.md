@@ -65,6 +65,7 @@ flowchart LR
 Needs the AWS CLI (profile `nutrix` with the event account's temporary credentials), Docker and Python 3.11.
 
 ```bash
+pip install -r requirements.txt   # Python packages for the scripts and tests (the image installs its own subset)
 cp .env.example .env              # set PMRF_API_KEY
 set -a; . ./.env; set +a
 ./ops/data/sync_data.sh pull      # datasets -> data/ (integration tests use data/CGMacros)
