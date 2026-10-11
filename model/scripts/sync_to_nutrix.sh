@@ -1,0 +1,31 @@
+#!/bin/bash
+# Copy the code (allow-list only: no data, results, model binaries or credentials) into the team repo's model/ folder.
+# usage: bash scripts/sync_to_nutrix.sh <Nutrix clone>
+set -e
+DST="$1/model"
+mkdir -p "$DST"
+rsync -a --delete --prune-empty-dirs \
+  --exclude '__pycache__/' --exclude '*.pyc' \
+  --include 'pmrf/***' --include 'service/***' --include 'scripts/***' --include 'tests/***' \
+  --include 'docs/' --include 'docs/api_contract.md' --include 'docs/model_facts_for_slides.md' \
+  --include 'figures/' --include 'figures/framework/' --include 'figures/framework/draw_framework.py' \
+  --include 'figures/framework/render.sh' --include 'figures/framework/assets.json' --include 'figures/framework/README.md' \
+  --include 'figures/framework/out/' --include 'figures/framework/out/training_framework.*' \
+  --include 'deploy/' --include 'deploy/Dockerfile' --include 'deploy/requirements.txt' \
+  --include 'site/' --include 'site/template.html' \
+  --include 'README.md' --include 'DEPLOY.md' --include '.dockerignore' --include 'requirements-dev.txt' \
+  --exclude '*' ./ "$DST/"
+cp deploy/gitignore.model "$DST/.gitignore"
+echo "synced to $DST"
+# UI showcase package (12 meals, photos + API JSON; CGMacros CC BY-NC-SA, attribution in its README) - approved for the public repo 2026-10-10
+if [ -d results/best_subjects/ui_package ]; then
+  rsync -a --delete results/best_subjects/ui_package/ "$DST/ui_showcase/"
+  cp docs/ui_showcase_README.md "$DST/ui_showcase/README.md"
+  echo "ui_showcase synced"
+fi
+# UI showcase package for model v7 (10 meals, 10 people with prediabetes or type 2 diabetes; same license note) - requested 2026-10-10
+if [ -d results/ui_showcase_v7 ]; then
+  rsync -a --delete results/ui_showcase_v7/ "$DST/ui_showcase_v7/"
+  cp docs/ui_showcase_v7_README.md "$DST/ui_showcase_v7/README.md"
+  echo "ui_showcase_v7 synced"
+fi
