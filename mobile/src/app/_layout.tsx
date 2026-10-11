@@ -27,7 +27,11 @@ function RootNavigator() {
       <AnimatedSplashOverlay />
       <Stack screenOptions={{ headerShown: false, animation: 'fade', contentStyle: { backgroundColor: colors.background } }}>
         <Stack.Screen name="index" />
-        <Stack.Protected guard={isReady && Boolean(user)}>
+        <Stack.Protected guard={isReady && user?.role === 'Clinician'}>
+          <Stack.Screen name="(clinician-tabs)" />
+          <Stack.Screen name="clinician-patient/[patientId]" />
+        </Stack.Protected>
+        <Stack.Protected guard={isReady && Boolean(user) && user?.role !== 'Clinician'}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="health-questionnaire" />
           <Stack.Screen name="profile" />

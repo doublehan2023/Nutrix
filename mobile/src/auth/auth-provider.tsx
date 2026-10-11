@@ -4,20 +4,14 @@ import {
   type PropsWithChildren,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
 } from 'react';
 
-import { demoPersonIdFromMetadata, type AuthenticatedUser, type Role, roleFromMetadata } from './types';
+import { demoPersonIdFromMetadata, type AuthenticatedUser, roleFromMetadata } from './types';
 
 type AuthContextValue = {
   isReady: boolean;
   user: AuthenticatedUser | null;
-  signInError?: string;
-  beginRoleLogin: (role: Role) => void;
-  cancelRoleLogin: () => void;
-  clearSignInError: () => void;
   getSessionToken: () => Promise<string | null>;
   signOut: () => Promise<void>;
 };
@@ -28,8 +22,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const { getToken, isLoaded: isAuthLoaded, isSignedIn } = useClerkAuth();
   const { isLoaded: isUserLoaded, user: clerkUser } = useUser();
   const { signOut: clerkSignOut } = useClerk();
-  const [selectedRole, setSelectedRole] = useState<Role>();
-  const [signInError, setSignInError] = useState<string>();
 
   const resolvedUser = useMemo<AuthenticatedUser | null>(() => {
     if (!isSignedIn || !clerkUser) return null;
@@ -43,35 +35,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
   }, [clerkUser, isSignedIn]);
 
-  const selectedPortalMismatch = Boolean(
-    selectedRole && resolvedUser && selectedRole !== resolvedUser.role,
-  );
-
-  useEffect(() => {
-    if (!selectedPortalMismatch || !selectedRole) return;
-
-    setSignInError(
-      `This account is not authorized for the ${selectedRole} portal. Choose the role assigned by the Nutrix team.`,
-    );
-    void clerkSignOut();
-  }, [clerkSignOut, selectedPortalMismatch, selectedRole]);
-
-  const beginRoleLogin = useCallback((role: Role) => {
-    setSelectedRole(role);
-    setSignInError(undefined);
-  }, []);
-
-  const cancelRoleLogin = useCallback(() => {
-    setSelectedRole(undefined);
-  }, []);
-
-  const clearSignInError = useCallback(() => {
-    setSignInError(undefined);
-  }, []);
-
   const signOut = useCallback(async () => {
-    setSelectedRole(undefined);
-    setSignInError(undefined);
     await clerkSignOut();
   }, [clerkSignOut]);
 
@@ -83,24 +47,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const value = useMemo<AuthContextValue>(
     () => ({
       isReady: isAuthLoaded && isUserLoaded,
-      user: selectedPortalMismatch ? null : resolvedUser,
-      signInError,
-      beginRoleLogin,
-      cancelRoleLogin,
-      clearSignInError,
+      user: resolvedUser,
       getSessionToken,
       signOut,
     }),
     [
-      beginRoleLogin,
-      cancelRoleLogin,
-      clearSignInError,
       getSessionToken,
       isAuthLoaded,
       isUserLoaded,
       resolvedUser,
-      selectedPortalMismatch,
-      signInError,
       signOut,
     ],
   );

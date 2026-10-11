@@ -12,5 +12,8 @@ export default function IndexScreen() {
     return <View className="app-screen items-center justify-center"><ActivityIndicator /></View>;
   }
 
-  return <Redirect href={user ? (isQuestionnairePending ? '/health-questionnaire' : '/(tabs)') : '/(auth)/sign-in'} />;
+  if (!user) return <Redirect href="/(auth)/sign-in" />;
+  if (user.role === 'Clinician') return <Redirect href="/(clinician-tabs)" />;
+
+  return <Redirect href={isQuestionnairePending ? '/health-questionnaire' : '/(tabs)'} />;
 }

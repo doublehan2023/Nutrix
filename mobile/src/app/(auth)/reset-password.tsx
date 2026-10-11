@@ -26,11 +26,12 @@ export default function ResetPasswordScreen() {
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const needsNewPassword = signIn.status === 'needs_new_password';
 
   async function submit() {
     setError(undefined);
-    if (!code.trim() || !password || !confirmPassword) {
-      setError("Enter your code and new password.");
+    if ((!needsNewPassword && !code.trim()) || !password || !confirmPassword) {
+      setError(needsNewPassword ? 'Enter and confirm your new password.' : 'Enter your code and new password.');
       return;
     }
     if (!meetsPasswordRequirement(password)) {
@@ -107,22 +108,20 @@ export default function ResetPasswordScreen() {
     <AuthScreen>
       <AuthHeader
         title="Choose a new password"
-        subtitle={
-          email
-            ? `Use the code sent to ${email}.`
-            : "Use the code sent to your email."
-        }
+        subtitle={needsNewPassword ? 'Set a password to finish your account setup.' : email ? `Use the code sent to ${email}.` : 'Use the code sent to your email.'}
       />
       <ErrorMessage message={error ?? notice} />
-      <Field
-        label="Reset code"
-        value={code}
-        onChangeText={setCode}
-        keyboardType="number-pad"
-        autoComplete="one-time-code"
-        placeholder="123456"
-        returnKeyType="next"
-      />
+      {!needsNewPassword ? (
+        <Field
+          label="Reset code"
+          value={code}
+          onChangeText={setCode}
+          keyboardType="number-pad"
+          autoComplete="one-time-code"
+          placeholder="123456"
+          returnKeyType="next"
+        />
+      ) : null}
       <Field
         label="New password"
         value={password}
@@ -149,7 +148,7 @@ export default function ResetPasswordScreen() {
         onPress={submit}
         disabled={isSubmitting || fetchStatus === "fetching"}
       />
-      <TextButton label="Send a new reset code" onPress={resend} />
+      {!needsNewPassword ? <TextButton label="Send a new reset code" onPress={resend} /> : null}
     </AuthScreen>
   );
 }

@@ -3,10 +3,8 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { AuthHeader, AuthScreen, ErrorMessage, RoleTab, TextButton } from '@/components/auth/auth-ui';
-import { useAuth } from '@/auth/auth-provider';
+import { AuthHeader, AuthScreen, ErrorMessage, TextButton } from '@/components/auth/auth-ui';
 import { messageForClerkError } from '@/auth/clerk-error';
-import { roles, type Role } from '@/auth/types';
 import { colors } from '../../../constants/theme';
 
 type FieldErrors = {
@@ -15,16 +13,13 @@ type FieldErrors = {
 };
 
 export default function SignInScreen() {
-  const { beginRoleLogin, cancelRoleLogin, clearSignInError, signInError } = useAuth();
   const { signIn, fetchStatus } = useSignIn();
-  const [role, setRole] = useState<Role>('Patient');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const patientSelected = role === 'Patient';
   const isBusy = isSubmitting || fetchStatus === 'fetching';
 
   async function submit() {
@@ -39,29 +34,32 @@ export default function SignInScreen() {
 
     setIsSubmitting(true);
     try {
-      beginRoleLogin(role);
       const { error: signInFailure } = await signIn.password({
         emailAddress: email.trim().toLowerCase(),
         password,
       });
       if (signInFailure) {
-        cancelRoleLogin();
         setSubmitError(messageForClerkError(signInFailure));
         return;
       }
+      if (signIn.status === 'needs_new_password') {
+        router.replace({ pathname: '/(auth)/reset-password', params: { email: email.trim().toLowerCase() } });
+        return;
+      }
+      if (signIn.status === 'needs_second_factor' || signIn.status === 'needs_client_trust') {
+        router.replace('/(auth)/second-factor');
+        return;
+      }
       if (signIn.status !== 'complete') {
-        cancelRoleLogin();
-        setSubmitError('Finish the account setup in your invitation or password-reset email, then sign in again.');
+        setSubmitError('This sign-in needs another verification step. Use your invitation link to finish setup, then try again.');
         return;
       }
 
       const { error: finalizeFailure } = await signIn.finalize({ navigate: () => router.replace('/') });
       if (finalizeFailure) {
-        cancelRoleLogin();
         setSubmitError(messageForClerkError(finalizeFailure));
       }
     } catch (reason) {
-      cancelRoleLogin();
       setSubmitError(reason instanceof Error ? reason.message : 'We could not sign you in.');
     } finally {
       setIsSubmitting(false);
@@ -70,31 +68,7 @@ export default function SignInScreen() {
 
   return (
     <AuthScreen>
-      <AuthHeader title="Secure login" subtitle="Choose your portal to continue to Nutrix." />
-      <View accessibilityRole="tablist" style={styles.roleTabs}>
-        {roles.map((item) => (
-          <RoleTab
-            key={item}
-            label={item}
-            active={role === item}
-            onPress={() => {
-              setRole(item);
-              setSubmitError(undefined);
-              setFieldErrors({});
-              clearSignInError();
-            }}
-          />
-        ))}
-      </View>
-
-      {!patientSelected && (
-        <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>{role} access is invite-only</Text>
-          <Text style={styles.noticeText}>
-            Use the credentials created by the Nutrix team. If you need access, contact your organization administrator.
-          </Text>
-        </View>
-      )}
+      <AuthHeader title="Secure login" subtitle="Sign in with your Nutrix email and password." />
 
       <View style={styles.form}>
         <View style={styles.field}>
@@ -139,35 +113,29 @@ export default function SignInScreen() {
           {fieldErrors.password ? <Text style={styles.fieldError}>{fieldErrors.password}</Text> : null}
         </View>
 
-        <ErrorMessage message={submitError ?? signInError} />
+        <ErrorMessage message={submitError} />
         <Pressable
-          accessibilityLabel={`Sign in as ${role}`}
+          accessibilityLabel="Sign in"
           accessibilityRole="button"
           disabled={isBusy}
           onPress={submit}
           style={({ pressed }) => [styles.signInButton, (pressed || isBusy) && styles.buttonMuted]}>
-          {isBusy ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.signInButtonText}>Sign in as {role}</Text>}
+          {isBusy ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.signInButtonText}>Sign in</Text>}
         </Pressable>
       </View>
 
       <TextButton label="Forgot password?" onPress={() => router.push('/(auth)/forgot-password')} />
-      {patientSelected && (
-        <View style={styles.linkRow}>
-          <Text style={styles.linkCopy}>New to Nutrix?</Text>
-          <Pressable accessibilityRole="link" onPress={() => router.push('/(auth)/sign-up')}>
-            <Text style={styles.link}>Create a patient account</Text>
-          </Pressable>
-        </View>
-      )}
+      <View style={styles.linkRow}>
+        <Text style={styles.linkCopy}>New to Nutrix?</Text>
+        <Pressable accessibilityRole="link" onPress={() => router.push('/(auth)/sign-up')}>
+          <Text style={styles.link}>Create a patient account</Text>
+        </Pressable>
+      </View>
     </AuthScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  roleTabs: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, marginBottom: 24 },
-  notice: { backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: colors.primary, borderRadius: 12, padding: 12, marginBottom: 17 },
-  noticeTitle: { color: colors.onPrimary, fontSize: 14, fontWeight: '800', marginBottom: 3 },
-  noticeText: { color: colors.onPrimarySoft, fontSize: 14, lineHeight: 19 },
   form: { gap: 16 },
   field: { gap: 8 },
   label: { color: colors.foreground, fontSize: 16, fontWeight: '700' },

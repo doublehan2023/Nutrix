@@ -106,7 +106,7 @@ export default function SecondFactorScreen() {
     <AuthScreen>
       <AuthHeader
         title="Verify your sign-in"
-        subtitle="Complete the additional verification step to continue."
+        subtitle={signIn.status === 'needs_client_trust' ? 'Verify this new device to continue.' : 'Complete the additional verification step to continue.'}
       />
       <ErrorMessage message={error} />
       {!selectedFactor ? (
