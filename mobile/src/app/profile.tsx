@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { QuestionnaireField } from '@/components/profile/questionnaire-field';
+import { HeightField } from '@/components/profile/height-field';
 import { SelectionChip } from '@/components/profile/selection-chip';
 import {
   diabetesTypes,
@@ -90,7 +91,7 @@ export default function ProfileScreen() {
                 <QuestionnaireField keyboardType="number-pad" label="Age" onChangeText={(age) => updateAnswers({ age })} placeholder="42" suffix="years" value={answers.age} />
               </View>
               <View className="mt-5 flex-row gap-4">
-                <QuestionnaireField label="Height" onChangeText={(height) => updateAnswers({ height })} placeholder={'5\' 5"'} suffix="ft / in" value={answers.height} />
+                <HeightField onChange={(height) => updateAnswers({ height })} value={answers.height} />
                 <QuestionnaireField keyboardType="decimal-pad" label="Weight" onChangeText={(weight) => updateAnswers({ weight })} placeholder="150" suffix="lb" value={answers.weight} />
               </View>
               <Text className="mt-6 text-base font-semibold text-ink">Gender</Text>

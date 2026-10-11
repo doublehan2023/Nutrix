@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { QuestionnaireField } from '@/components/profile/questionnaire-field';
+import { HeightField } from '@/components/profile/height-field';
 import { QuestionnaireProgress } from '@/components/profile/questionnaire-progress';
 import { SelectionChip } from '@/components/profile/selection-chip';
 import {
@@ -140,13 +141,7 @@ export default function HealthQuestionnaireScreen() {
             />
           </View>
           <View className="mt-5 flex-row gap-4">
-            <QuestionnaireField
-              label="Height"
-              onChangeText={(height) => updateAnswers({ height })}
-              placeholder={'5\' 5"'}
-              suffix="ft / in"
-              value={answers.height}
-            />
+            <HeightField onChange={(height) => updateAnswers({ height })} value={answers.height} />
             <QuestionnaireField
               keyboardType="decimal-pad"
               label="Weight"
