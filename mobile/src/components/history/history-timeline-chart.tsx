@@ -3,6 +3,7 @@ import Svg, { Line, Path, Polygon, Text as SvgText } from 'react-native-svg';
 
 import type { HistoryDay, HistorySeriesPoint } from '@/data/history';
 import { colors } from '../../../constants/theme';
+import { useLanguage } from '@/features/localization/language-context';
 
 type HistoryTimelineChartProps = {
   day: HistoryDay;
@@ -29,6 +30,7 @@ function LegendItem({ color, label, diamond = false }: { color: string; diamond?
 }
 
 export function HistoryTimelineChart({ day }: HistoryTimelineChartProps) {
+  const { t } = useLanguage();
   const { width } = useWindowDimensions();
   const chartWidth = Math.max(220, width - 80);
   const plotWidth = chartWidth - chartPadding.left - chartPadding.right;
@@ -43,7 +45,7 @@ export function HistoryTimelineChart({ day }: HistoryTimelineChartProps) {
   return (
     <View className="app-card mt-4">
       <Text className="app-card-title">
-        Your glucose and heart rate history for {day.id}
+        {t('glucoseHeartRate', { day: day.id })}
       </Text>
       <View className="mt-2 items-center">
         <Svg height={chartHeight} width={chartWidth} accessibilityLabel={`24-hour history chart for ${day.id}`}>
@@ -100,10 +102,10 @@ export function HistoryTimelineChart({ day }: HistoryTimelineChartProps) {
           ))}
         </Svg>
       </View>
-      <Text className="mt-2 text-xs text-copy">Hours since the sampled day began.</Text>
+      <Text className="mt-2 text-xs text-copy">{t('hoursSince')}</Text>
       <View className="mt-2 flex-row flex-wrap gap-x-4 gap-y-2">
-        <LegendItem color={colors.success} label="Glucose" />
-        <LegendItem color={colors.heartRate} label="Heart rate" />
+        <LegendItem color={colors.success} label={t('glucose')} />
+        <LegendItem color={colors.heartRate} label={t('heartRate')} />
       </View>
     </View>
   );

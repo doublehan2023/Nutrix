@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 
 import { colors } from '../../../constants/theme';
+import { useLanguage } from '@/features/localization/language-context';
 
 export type PredictionDriver = {
   label: string;
@@ -12,9 +13,10 @@ type PredictionDriversProps = {
 };
 
 export function PredictionDrivers({ drivers }: PredictionDriversProps) {
+  const { t } = useLanguage();
   return (
     <View className="app-card mt-4">
-      <Text className="app-card-title">Top drivers for this prediction</Text>
+      <Text className="app-card-title">{t('topDrivers')}</Text>
       <View className="mt-4 gap-2">
         {drivers.map((driver, index) => (
           <View className="flex-row items-center" key={driver.label}>

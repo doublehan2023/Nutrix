@@ -2,6 +2,7 @@ import { Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Line, Path, Text as SvgText } from 'react-native-svg';
 
 import { colors } from '../../../constants/theme';
+import { useLanguage } from '@/features/localization/language-context';
 
 type ResponseComparisonChartProps = {
   minutes: readonly number[];
@@ -16,6 +17,7 @@ function buildPath(values: readonly number[], toX: (index: number) => number, to
 }
 
 export function ResponseComparisonChart({ response, minutes, sampleSize }: ResponseComparisonChartProps) {
+  const { t } = useLanguage();
   const { width } = useWindowDimensions();
   const chartWidth = Math.max(220, width - 80);
   const plotWidth = chartWidth - chartPadding.left - chartPadding.right;
@@ -28,11 +30,11 @@ export function ResponseComparisonChart({ response, minutes, sampleSize }: Respo
 
   return (
     <View className="app-card mt-4">
-      <Text className="app-card-title">Observed meal response · first 7 days</Text>
+      <Text className="app-card-title">{t('observedMealResponse')}</Text>
       <View className="mt-2 flex-row gap-5">
         <View className="flex-row items-center">
           <View className="mr-2 h-1 w-5 rounded-full" style={{ backgroundColor: colors.medication }} />
-          <Text className="text-sm text-copy">Mean observed glucose change</Text>
+          <Text className="text-sm text-copy">{t('meanGlucoseChange')}</Text>
         </View>
       </View>
       <View className="mt-2 items-center">
@@ -68,7 +70,7 @@ export function ResponseComparisonChart({ response, minutes, sampleSize }: Respo
         </Svg>
       </View>
       <Text className="text-sm text-copy">
-        Mean observed rise at 60 min: +{sixtyMinuteValue} mg/dL across {sampleSize} complete meal-response windows.
+        {t('meanRise', { value: sixtyMinuteValue, count: sampleSize })}
       </Text>
     </View>
   );

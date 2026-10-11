@@ -9,9 +9,11 @@ import { LoggedMealsList } from '@/components/history/logged-meals-list';
 import { getDemoHistory } from '@/data/demo-history';
 import type { HistoryDayId } from '@/data/history';
 import { useAuth } from '@/auth/auth-provider';
+import { useLanguage } from '@/features/localization/language-context';
 
 export default function HistoryScreen() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const history = getDemoHistory(user?.personId);
   const [selectedDayId, setSelectedDayId] = useState<HistoryDayId>('D7');
   const selectedDay = history.days.find((day) => day.id === selectedDayId) ?? history.latestDay;
@@ -19,7 +21,7 @@ export default function HistoryScreen() {
   return (
     <SafeAreaView className="app-screen" edges={['top']}>
       <ScrollView contentContainerClassName="app-scroll-content" showsVerticalScrollIndicator={false}>
-        <Text className="app-page-title">History</Text>
+        <Text className="app-page-title">{t('history')}</Text>
         <View className="mt-2">
           <Text className="text-sm text-copy">
             {history.participantLabel} · 7-day CGMacros baseline · {history.sourceWindow}
@@ -32,7 +34,7 @@ export default function HistoryScreen() {
         <DailyAverageChart days={history.days} selectedDay={selectedDayId} />
         {selectedDay.meals.length > 0 ? <LoggedMealsList day={selectedDay} /> : null}
         <Text className="mt-5 text-center text-xs leading-5 text-copy">
-          Each day uses recorded CGMacros samples; meal details are available for the final sampled day.
+          {t('historyFootnote')}
         </Text>
       </ScrollView>
     </SafeAreaView>

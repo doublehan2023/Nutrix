@@ -6,15 +6,17 @@ import { ResponseComparisonChart } from '@/components/insights/response-comparis
 import { TimeInRangeCard } from '@/components/insights/time-in-range-card';
 import { useAuth } from '@/auth/auth-provider';
 import { getDemoHistory } from '@/data/demo-history';
+import { useLanguage } from '@/features/localization/language-context';
 
 export default function InsightsScreen() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const history = getDemoHistory(user?.personId);
 
   return (
     <SafeAreaView className="app-screen" edges={['top']}>
       <ScrollView contentContainerClassName="app-scroll-content" showsVerticalScrollIndicator={false}>
-        <Text className="app-page-title">Insights</Text>
+        <Text className="app-page-title">{t('insights')}</Text>
         <Text className="mt-2 text-sm text-copy">
           {history.participantLabel} · observed CGMacros baseline data
         </Text>

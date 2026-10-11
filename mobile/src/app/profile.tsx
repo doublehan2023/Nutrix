@@ -15,6 +15,7 @@ import {
   type Ethnicity,
   type ManagementOption,
 } from '@/features/profile/health-questionnaire-context';
+import { useLanguage } from '@/features/localization/language-context';
 
 function toggleItem<T extends string>(items: T[], value: T) {
   return items.includes(value) ? items.filter((item) => item !== value) : [...items, value];
@@ -32,6 +33,7 @@ function ProfileValue({ label, value }: { label: string; value?: string }) {
 export default function ProfileScreen() {
   const router = useRouter();
   const { answers, updateAnswers } = useHealthQuestionnaire();
+  const { t } = useLanguage();
   const [editing, setEditing] = useState(false);
 
   function save() {
@@ -43,21 +45,21 @@ export default function ProfileScreen() {
       <ScrollView contentContainerClassName="px-5 pb-12" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View className="flex-row items-center py-5">
           <Pressable
-            accessibilityLabel="Back to settings"
+            accessibilityLabel={t('backToSettings')}
             accessibilityRole="button"
             className="mr-3 h-10 w-10 items-center justify-center rounded-full active:bg-line"
             onPress={() => router.replace('/(tabs)/settings')}>
             <Text className="-mt-1 text-4xl font-light leading-none text-ink">‹</Text>
           </Pressable>
-          <Text className="text-3xl font-bold tracking-tight text-ink">Health profile</Text>
+          <Text className="text-3xl font-bold tracking-tight text-ink">{t('healthProfile')}</Text>
         </View>
 
         {!editing ? (
           <>
             <View className="app-card">
               <View className="flex-row items-center justify-between">
-                <Text className="text-xl font-bold text-ink">About you</Text>
-                <Text className="rounded-full bg-brand-soft px-3 py-1 text-xs font-bold text-brand-dark">SESSION ONLY</Text>
+                <Text className="text-xl font-bold text-ink">{t('aboutYou')}</Text>
+                <Text className="rounded-full bg-brand-soft px-3 py-1 text-xs font-bold text-brand-dark">{t('sessionOnly')}</Text>
               </View>
               <View className="mt-5 flex-row flex-wrap gap-3">
                 <ProfileValue label="Age" value={answers.age ? `${answers.age} years` : undefined} />
@@ -66,35 +68,35 @@ export default function ProfileScreen() {
                 <ProfileValue label="Gender" value={answers.gender} />
                 {answers.gender === 'Female' ? <ProfileValue label="Pregnancy" value={answers.isPregnant} /> : null}
               </View>
-              <Text className="mt-5 text-sm text-copy">Ethnicity</Text>
-              <Text className="mt-1 text-base font-semibold text-ink">{answers.ethnicity.join(', ') || 'Not provided'}</Text>
+              <Text className="mt-5 text-sm text-copy">{t('ethnicity')}</Text>
+              <Text className="mt-1 text-base font-semibold text-ink">{answers.ethnicity.join(', ') || t('notProvided')}</Text>
             </View>
 
             <View className="app-card mt-4">
-              <Text className="text-xl font-bold text-ink">Diabetes history</Text>
+              <Text className="text-xl font-bold text-ink">{t('diabetesHistory')}</Text>
               <View className="mt-5 flex-row flex-wrap gap-3">
                 <ProfileValue label="Diabetes type" value={answers.diabetesType} />
               </View>
-              <Text className="mt-5 text-sm text-copy">Management</Text>
-              <Text className="mt-1 text-base font-semibold text-ink">{answers.diabetesManagement.join(', ') || 'Not provided'}</Text>
+              <Text className="mt-5 text-sm text-copy">{t('management')}</Text>
+              <Text className="mt-1 text-base font-semibold text-ink">{answers.diabetesManagement.join(', ') || t('notProvided')}</Text>
             </View>
 
             <Pressable accessibilityRole="button" className="app-button-primary mt-5" onPress={() => setEditing(true)}>
-              <Text className="text-base font-bold text-on-brand">Edit health profile</Text>
+              <Text className="text-base font-bold text-on-brand">{t('editHealthProfile')}</Text>
             </Pressable>
           </>
         ) : (
           <>
             <View className="app-card">
-              <Text className="text-xl font-bold text-ink">About you</Text>
+              <Text className="text-xl font-bold text-ink">{t('aboutYou')}</Text>
               <View className="mt-5">
-                <QuestionnaireField keyboardType="number-pad" label="Age" onChangeText={(age) => updateAnswers({ age })} placeholder="42" suffix="years" value={answers.age} />
+                <QuestionnaireField keyboardType="number-pad" label={t('age')} onChangeText={(age) => updateAnswers({ age })} placeholder="42" suffix="years" value={answers.age} />
               </View>
               <View className="mt-5 flex-row gap-4">
                 <HeightField onChange={(height) => updateAnswers({ height })} value={answers.height} />
-                <QuestionnaireField keyboardType="decimal-pad" label="Weight" onChangeText={(weight) => updateAnswers({ weight })} placeholder="150" suffix="lb" value={answers.weight} />
+                <QuestionnaireField keyboardType="decimal-pad" label={t('weight')} onChangeText={(weight) => updateAnswers({ weight })} placeholder="150" suffix="lb" value={answers.weight} />
               </View>
-              <Text className="mt-6 text-base font-semibold text-ink">Gender</Text>
+              <Text className="mt-6 text-base font-semibold text-ink">{t('gender')}</Text>
               <View className="mt-3 flex-row flex-wrap gap-2">
                 {genders.map((gender) => (
                   <SelectionChip
@@ -107,7 +109,7 @@ export default function ProfileScreen() {
               </View>
               {answers.gender === 'Female' ? (
                 <View className="mt-4 w-full rounded-card bg-brand-soft p-4">
-                  <Text className="text-base font-semibold text-ink">Are you currently pregnant?</Text>
+                  <Text className="text-base font-semibold text-ink">{t('pregnancy')}</Text>
                   <View className="mt-3 flex-row flex-wrap gap-2">
                     {(['Yes', 'No', 'Not sure'] as const).map((status) => (
                       <SelectionChip key={status} label={status} onPress={() => updateAnswers({ isPregnant: status })} selected={answers.isPregnant === status} />
@@ -115,8 +117,8 @@ export default function ProfileScreen() {
                   </View>
                 </View>
               ) : null}
-              <Text className="mt-6 text-base font-semibold text-ink">Ethnicity</Text>
-              <Text className="mt-1 text-sm text-copy">Select all that apply</Text>
+              <Text className="mt-6 text-base font-semibold text-ink">{t('ethnicity')}</Text>
+              <Text className="mt-1 text-sm text-copy">{t('selectAll')}</Text>
               <View className="mt-3 flex-row flex-wrap gap-2">
                 {ethnicities.map((ethnicity) => (
                   <SelectionChip
@@ -130,14 +132,14 @@ export default function ProfileScreen() {
             </View>
 
             <View className="app-card mt-4">
-              <Text className="text-xl font-bold text-ink">Diabetes history</Text>
-              <Text className="mt-5 text-base font-semibold text-ink">Diabetes type</Text>
+              <Text className="text-xl font-bold text-ink">{t('diabetesHistory')}</Text>
+              <Text className="mt-5 text-base font-semibold text-ink">{t('diabetesType')}</Text>
               <View className="mt-3 flex-row flex-wrap gap-2">
                 {diabetesTypes.map((type) => (
                   <SelectionChip key={type} label={type} onPress={() => updateAnswers({ diabetesType: type })} selected={answers.diabetesType === type} />
                 ))}
               </View>
-              <Text className="mt-6 text-base font-semibold text-ink">How do you manage diabetes?</Text>
+              <Text className="mt-6 text-base font-semibold text-ink">{t('diabetesManagement')}</Text>
               <View className="mt-3 flex-row flex-wrap gap-2">
                 {managementOptions.map((option) => (
                   <SelectionChip
@@ -151,7 +153,7 @@ export default function ProfileScreen() {
             </View>
 
             <Pressable accessibilityRole="button" className="app-button-primary mt-5" onPress={save}>
-              <Text className="text-base font-bold text-on-brand">Save changes</Text>
+              <Text className="text-base font-bold text-on-brand">{t('saveChanges')}</Text>
             </Pressable>
           </>
         )}

@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 
 import type { HistoryDay, HistoryDayId } from '@/data/history';
+import { useLanguage } from '@/features/localization/language-context';
 
 type DailyAverageChartProps = {
   days: readonly HistoryDay[];
@@ -8,13 +9,14 @@ type DailyAverageChartProps = {
 };
 
 export function DailyAverageChart({ days, selectedDay }: DailyAverageChartProps) {
+  const { t } = useLanguage();
   const values = days.map((day) => day.averageGlucose);
   const minimum = Math.floor((Math.min(...values) - 10) / 10) * 10;
   const maximum = Math.ceil((Math.max(...values) + 10) / 10) * 10;
 
   return (
     <View className="app-card mt-4">
-      <Text className="app-card-title">Daily average glucose (mg/dL)</Text>
+      <Text className="app-card-title">{t('dailyAverage')}</Text>
       <View className="mt-4 flex-row items-end border-b border-line px-2 pt-2">
         {days.map((day) => {
           const selected = day.id === selectedDay;

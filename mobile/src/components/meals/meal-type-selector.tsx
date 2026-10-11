@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 
 import { mealTypes, type MealType } from '@/features/meals/meal-draft-context';
+import { useLanguage } from '@/features/localization/language-context';
 
 type MealTypeSelectorProps = {
   onChange: (mealType: MealType) => void;
@@ -8,9 +9,10 @@ type MealTypeSelectorProps = {
 };
 
 export function MealTypeSelector({ onChange, value }: MealTypeSelectorProps) {
+  const { t } = useLanguage();
   return (
     <View className="app-card">
-      <Text className="app-card-title">Meal type</Text>
+      <Text className="app-card-title">{t('mealType')}</Text>
       <View className="mt-3 flex-row gap-2">
         {mealTypes.map((mealType) => {
           const selected = mealType === value;
@@ -25,7 +27,7 @@ export function MealTypeSelector({ onChange, value }: MealTypeSelectorProps) {
               key={mealType}
               onPress={() => onChange(mealType)}>
               <Text className={`text-center text-sm font-semibold ${selected ? 'text-brand-dark' : 'text-ink'}`}>
-                {mealType}
+                {t(mealType)}
               </Text>
             </Pressable>
           );

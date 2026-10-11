@@ -6,12 +6,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { tabs } from '../../../constants/data';
 import { colors, components } from '../../../constants/theme';
+import { useLanguage } from '@/features/localization/language-context';
 
 const tabBar = components.tabBar;
 const activeTabColor = tabBar.activeColor;
 const inactiveTabColor = tabBar.inactiveColor;
 
 function PatientTabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
+  const { t } = useLanguage();
   return (
     <View
       style={[
@@ -30,7 +32,8 @@ function PatientTabBar({ state, descriptors, navigation, insets }: BottomTabBarP
 
         const isFocused = state.index === index;
         const options = descriptors[route.key].options;
-        const accessibilityLabel = options.tabBarAccessibilityLabel ?? options.title ?? tab.title;
+        const translatedTitle = t(tab.name === 'index' ? 'today' : tab.name);
+        const accessibilityLabel = options.tabBarAccessibilityLabel ?? translatedTitle;
 
         function onPress() {
           const event = navigation.emit({
@@ -59,7 +62,7 @@ function PatientTabBar({ state, descriptors, navigation, insets }: BottomTabBarP
               style={[styles.tabIcon, { tintColor: isFocused ? activeTabColor : inactiveTabColor }]}
             />
             <Text style={[styles.tabLabel, { color: isFocused ? activeTabColor : inactiveTabColor }]}>
-              {tab.title}
+              {translatedTitle}
             </Text>
           </Pressable>
         );

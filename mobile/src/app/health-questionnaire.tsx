@@ -18,6 +18,7 @@ import {
   type Gender,
   type ManagementOption,
 } from '@/features/profile/health-questionnaire-context';
+import { useLanguage } from '@/features/localization/language-context';
 
 function toggleItem<T extends string>(items: T[], value: T) {
   return items.includes(value) ? items.filter((item) => item !== value) : [...items, value];
@@ -26,6 +27,7 @@ function toggleItem<T extends string>(items: T[], value: T) {
 export default function HealthQuestionnaireScreen() {
   const router = useRouter();
   const { answers, completeQuestionnaire, resetAnswers, updateAnswers } = useHealthQuestionnaire();
+  const { t } = useLanguage();
   const [step, setStep] = useState<1 | 2>(1);
 
   function leaveQuestionnaire() {
@@ -48,23 +50,23 @@ export default function HealthQuestionnaireScreen() {
       <SafeAreaView className="app-screen" edges={['top']}>
         <ScrollView contentContainerClassName="px-5 pb-12" showsVerticalScrollIndicator={false}>
           <View className="flex-row items-center justify-between pt-5">
-            <Text className="text-2xl font-bold text-ink">Health questionnaire</Text>
+            <Text className="text-2xl font-bold text-ink">{t('healthQuestionnaire')}</Text>
             <Pressable accessibilityRole="button" onPress={leaveQuestionnaire}>
-              <Text className="text-base font-bold text-brand-dark">Skip</Text>
+              <Text className="text-base font-bold text-brand-dark">{t('skip')}</Text>
             </Pressable>
           </View>
           <QuestionnaireProgress step={2} />
-          <Text className="mt-3 text-3xl font-bold tracking-tight text-ink">Your diabetes history</Text>
-          <Text className="app-body-copy mt-2">This helps personalize your glucose insights and predictions.</Text>
+          <Text className="mt-3 text-3xl font-bold tracking-tight text-ink">{t('diabetesHistory')}</Text>
+          <Text className="app-body-copy mt-2">{t('diabetesDescription')}</Text>
 
           <View className="app-card mt-6">
             <View className="flex-row items-center">
               <View className="mr-3 h-8 w-8 items-center justify-center rounded-full bg-brand-soft">
                 <Text className="font-bold text-brand-dark">2</Text>
               </View>
-              <Text className="text-xl font-bold text-ink">Diabetes history</Text>
+              <Text className="text-xl font-bold text-ink">{t('diabetesHistory')}</Text>
             </View>
-            <Text className="mt-6 text-base font-semibold text-ink">Diabetes type</Text>
+            <Text className="mt-6 text-base font-semibold text-ink">{t('diabetesType')}</Text>
             <View className="mt-3 flex-row flex-wrap gap-2">
               {diabetesTypes.map((type) => (
                 <SelectionChip
@@ -76,8 +78,8 @@ export default function HealthQuestionnaireScreen() {
               ))}
             </View>
 
-            <Text className="mt-7 text-base font-semibold text-ink">How do you manage diabetes?</Text>
-            <Text className="mt-1 text-sm text-copy">Select all that apply</Text>
+            <Text className="mt-7 text-base font-semibold text-ink">{t('diabetesManagement')}</Text>
+            <Text className="mt-1 text-sm text-copy">{t('selectAll')}</Text>
             <View className="mt-3 flex-row flex-wrap gap-2">
               {managementOptions.map((option) => (
                 <SelectionChip
@@ -96,10 +98,10 @@ export default function HealthQuestionnaireScreen() {
 
           <View className="mt-5 flex-row gap-3">
             <Pressable accessibilityRole="button" className="flex-1 items-center justify-center rounded-card border border-brand px-4 py-4" onPress={() => setStep(1)}>
-              <Text className="text-base font-bold text-brand-dark">Back</Text>
+              <Text className="text-base font-bold text-brand-dark">{t('back')}</Text>
             </Pressable>
             <Pressable accessibilityRole="button" className="app-button-primary flex-1" onPress={finishQuestionnaire}>
-              <Text className="text-base font-bold text-on-brand">Finish</Text>
+              <Text className="text-base font-bold text-on-brand">{t('finish')}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -111,15 +113,15 @@ export default function HealthQuestionnaireScreen() {
     <SafeAreaView className="app-screen" edges={['top']}>
       <ScrollView contentContainerClassName="px-5 pb-12" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View className="flex-row items-center justify-between pt-5">
-          <Text className="text-2xl font-bold text-ink">Health questionnaire</Text>
+          <Text className="text-2xl font-bold text-ink">{t('healthQuestionnaire')}</Text>
           <Pressable accessibilityRole="button" onPress={leaveQuestionnaire}>
-            <Text className="text-base font-bold text-brand-dark">Skip</Text>
+            <Text className="text-base font-bold text-brand-dark">{t('skip')}</Text>
           </Pressable>
         </View>
         <QuestionnaireProgress step={1} />
-        <Text className="mt-3 text-3xl font-bold tracking-tight text-ink">Tell us about your health</Text>
+        <Text className="mt-3 text-3xl font-bold tracking-tight text-ink">{t('tellUs')}</Text>
         <Text className="app-body-copy mt-2">
-          About 5 minutes. Your answers personalize glucose predictions during this session.
+          {t('questionnaireDescription')}
         </Text>
 
         <View className="app-card mt-6">
@@ -127,13 +129,13 @@ export default function HealthQuestionnaireScreen() {
             <View className="mr-3 h-8 w-8 items-center justify-center rounded-full bg-brand-soft">
               <Text className="font-bold text-brand-dark">1</Text>
             </View>
-            <Text className="text-xl font-bold text-ink">About you</Text>
+            <Text className="text-xl font-bold text-ink">{t('aboutYou')}</Text>
           </View>
 
           <View className="mt-6">
             <QuestionnaireField
               keyboardType="number-pad"
-              label="Age"
+              label={t('age')}
               onChangeText={(age) => updateAnswers({ age })}
               placeholder="42"
               suffix="years"
@@ -144,7 +146,7 @@ export default function HealthQuestionnaireScreen() {
             <HeightField onChange={(height) => updateAnswers({ height })} value={answers.height} />
             <QuestionnaireField
               keyboardType="decimal-pad"
-              label="Weight"
+              label={t('weight')}
               onChangeText={(weight) => updateAnswers({ weight })}
               placeholder="150"
               suffix="lb"
@@ -152,7 +154,7 @@ export default function HealthQuestionnaireScreen() {
             />
           </View>
 
-          <Text className="mt-7 text-base font-semibold text-ink">Gender</Text>
+          <Text className="mt-7 text-base font-semibold text-ink">{t('gender')}</Text>
           <View className="mt-3 flex-row flex-wrap gap-2">
             {genders.map((gender) => (
               <SelectionChip key={gender} label={gender} onPress={() => selectGender(gender)} selected={answers.gender === gender} />
@@ -161,8 +163,8 @@ export default function HealthQuestionnaireScreen() {
 
           {answers.gender === 'Female' ? (
             <View className="mt-4 w-full self-stretch rounded-card bg-brand-soft p-4">
-              <Text className="text-base font-semibold text-ink">Are you currently pregnant?</Text>
-              <Text className="mt-1 text-sm leading-5 text-copy">Pregnancy changes glucose targets. Your care team will adjust guidance.</Text>
+              <Text className="text-base font-semibold text-ink">{t('pregnancy')}</Text>
+              <Text className="mt-1 text-sm leading-5 text-copy">{t('pregnancyDescription')}</Text>
               <View className="mt-4 flex-row flex-wrap gap-2">
                 {(['Yes', 'No', 'Not sure'] as const).map((status) => (
                   <SelectionChip
@@ -176,8 +178,8 @@ export default function HealthQuestionnaireScreen() {
             </View>
           ) : null}
 
-          <Text className="mt-7 text-base font-semibold text-ink">Ethnicity</Text>
-          <Text className="mt-1 text-sm text-copy">Select all that apply</Text>
+          <Text className="mt-7 text-base font-semibold text-ink">{t('ethnicity')}</Text>
+          <Text className="mt-1 text-sm text-copy">{t('selectAll')}</Text>
           <View className="mt-3 flex-row flex-wrap gap-2">
             {ethnicities.map((ethnicity) => (
               <SelectionChip
@@ -191,7 +193,7 @@ export default function HealthQuestionnaireScreen() {
         </View>
 
         <Pressable accessibilityRole="button" className="app-button-primary mt-5" onPress={() => setStep(2)}>
-          <Text className="text-base font-bold text-on-brand">Continue</Text>
+          <Text className="text-base font-bold text-on-brand">{t('continue')}</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>

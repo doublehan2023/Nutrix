@@ -9,11 +9,13 @@ import { useMealDraft } from '@/features/meals/meal-draft-context';
 import { useMealPhotoPicker } from '@/hooks/use-meal-photo-picker';
 import { createGatewayClient, type Readiness } from '@/api/gateway';
 import { useAuth } from '@/auth/auth-provider';
+import { useLanguage } from '@/features/localization/language-context';
 
 export default function TodayScreen() {
   const router = useRouter();
   const { startDraft } = useMealDraft();
   const { getSessionToken } = useAuth();
+  const { t } = useLanguage();
   const gateway = useMemo(() => createGatewayClient({ getToken: getSessionToken }), [getSessionToken]);
   const [readiness, setReadiness] = useState<Readiness>();
   const [readinessError, setReadinessError] = useState<string>();
@@ -43,30 +45,30 @@ export default function TodayScreen() {
         <Text className="text-sm font-semibold uppercase tracking-widest text-brand-dark">
           Nutrix
         </Text>
-        <Text className="mt-3 text-4xl font-bold tracking-tight text-ink">Today</Text>
+        <Text className="mt-3 text-4xl font-bold tracking-tight text-ink">{t('today')}</Text>
         <Text className="app-body-copy mt-3">
-          Your meal and glucose forecast will appear here.
+          {t('todayDescription')}
         </Text>
         <View className="app-card mt-5">
-          <Text className="app-card-title">Personalization status</Text>
+          <Text className="app-card-title">{t('personalizationStatus')}</Text>
           {readiness ? (
             <Text className="mt-1 text-sm leading-5 text-copy">
               {readiness.status === 'ready'
-                ? 'Your model is ready for meal predictions.'
-                : `${readiness.daysCollected} of ${readiness.requiredDays} days collected. Predictions unlock after your baseline is ready.`}
+                ? t('modelReady')
+                : t('daysCollected', { days: readiness.daysCollected, required: readiness.requiredDays })}
             </Text>
           ) : (
-            <Text className="mt-1 text-sm leading-5 text-copy">{readinessError ?? 'Checking your personalization status…'}</Text>
+            <Text className="mt-1 text-sm leading-5 text-copy">{readinessError ?? t('checkingStatus')}</Text>
           )}
         </View>
         <View className="app-card mt-8">
-          <Text className="app-card-title">Meal photo</Text>
+          <Text className="app-card-title">{t('mealPhoto')}</Text>
           <Text className="mt-1 text-sm leading-5 text-copy">
-            Add a photo to help capture your meal details.
+            {t('addPhotoDescription')}
           </Text>
 
           <Pressable
-            accessibilityLabel="Add meal photo"
+            accessibilityLabel={t('addMealPhoto')}
             className="app-button-primary mt-4"
             disabled={status === 'processing'}
             onPress={choosePhotoSource}>
@@ -74,11 +76,11 @@ export default function TodayScreen() {
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <Text className="font-semibold text-on-brand">
-                Add meal photo
+                {t('addMealPhoto')}
               </Text>
             )}
           </Pressable>
-          {status === 'processing' ? <Text className="mt-3 text-center text-sm text-copy">Preparing your photo…</Text> : null}
+          {status === 'processing' ? <Text className="mt-3 text-center text-sm text-copy">{t('preparingPhoto')}</Text> : null}
           <PhotoPickerStatusMessage status={status} />
         </View>
       </ScrollView>

@@ -8,10 +8,12 @@ import { PredictionChart } from '@/components/prediction/prediction-chart';
 import { PredictionDrivers } from '@/components/prediction/prediction-drivers';
 import { PredictionHeader } from '@/components/prediction/prediction-header';
 import { useMealDraft } from '@/features/meals/meal-draft-context';
+import { useLanguage } from '@/features/localization/language-context';
 
 export default function PredictionScreen() {
   const router = useRouter();
   const { discardDraft, prediction } = useMealDraft();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!prediction) router.replace('/(tabs)');
@@ -46,7 +48,7 @@ export default function PredictionScreen() {
   return (
     <SafeAreaView className="app-screen" edges={['top']}>
       <ScrollView contentContainerClassName="px-5 pb-12">
-        <PredictionHeader onBack={() => router.back()} title="Meal prediction" />
+        <PredictionHeader onBack={() => router.back()} title={t('mealPrediction')} />
         <PredictionChart
           data={chartData}
           day={8}
@@ -55,14 +57,14 @@ export default function PredictionScreen() {
         />
 
         <View className="mt-4 flex-row gap-3">
-          <MetricCard label="Peak" unit="mg/dL" value={String(Math.round(prediction.prediction.peak_glucose_mgdl))} />
-          <MetricCard label="Time to peak" unit="min" value={String(Math.round(prediction.prediction.time_to_peak_min))} />
+          <MetricCard label={t('peakLabel')} unit="mg/dL" value={String(Math.round(prediction.prediction.peak_glucose_mgdl))} />
+          <MetricCard label={t('timeToPeak')} unit="min" value={String(Math.round(prediction.prediction.time_to_peak_min))} />
           <MetricCard label="2h iAUC" unit="mg·min/dL" value={Math.round(prediction.prediction.iauc_0_120_mgdl_min).toLocaleString()} />
         </View>
 
         <View className="app-card mt-4">
-          <Text className="text-base font-semibold text-ink">Glucose after meal</Text>
-          <Text className="mt-1 text-sm text-copy">Predicted · observed</Text>
+          <Text className="text-base font-semibold text-ink">{t('glucoseAfterMeal')}</Text>
+          <Text className="mt-1 text-sm text-copy">{t('predictedObserved')}</Text>
           <View className="mt-4 flex-row justify-between">
             {comparisonRows.map((row) => (
               <View className="items-center" key={row.minute}>
@@ -77,7 +79,7 @@ export default function PredictionScreen() {
         <PredictionDrivers drivers={drivers} />
 
         <View className="mt-4 rounded-card bg-status-low px-5 py-4">
-          <Text className="text-base font-semibold text-on-secondary">Confidence: {prediction.confidence.level}</Text>
+          <Text className="text-base font-semibold text-on-secondary">{t('confidence')}: {prediction.confidence.level}</Text>
           <Text className="mt-1 text-sm leading-5 text-on-secondary">
             {prediction.confidence.flags.length ? prediction.confidence.flags.join(' · ') : 'Personalized from your available data.'}
           </Text>
@@ -87,7 +89,7 @@ export default function PredictionScreen() {
           This is a demonstration estimate and not medical advice.
         </Text>
         <Pressable accessibilityRole="button" className="app-button-primary mt-5" onPress={returnHome}>
-          <Text className="text-lg font-bold text-on-brand">Go back to home page</Text>
+          <Text className="text-lg font-bold text-on-brand">{t('goHome')}</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
