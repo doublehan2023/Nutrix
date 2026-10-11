@@ -57,6 +57,58 @@ The prediction service runs on AWS, defined in one CloudFormation template and d
 
 Request path, data layout and security boundaries: [docs/architecture.md](docs/architecture.md).
 
+## Application architecture
+
+The mobile client is an Expo / React Native app in [`mobile/`](mobile/) using Expo Router and Clerk. The app keeps
+navigation, short-lived UI state and API communication separate so patient and clinician experiences can evolve
+independently.
+
+```text
+Clerk session
+     │
+     ▼
+AuthProvider ── role + assigned demo participant
+     │
+     ├── Patient ── questionnaire → Today / History / Insights / Settings
+     │                    │
+     │                    └── meal photo → meal draft → prediction result
+     │
+     └── Clinician ── patient directory / clinician settings
+                            │
+                            └── read-only patient detail
+
+Patient API calls ── Clerk bearer token ──> mobile gateway ──> prediction service and storage
+```
+
+### Mobile client
+
+- [`mobile/src/app/`](mobile/src/app/) contains file-based routes. The root stack protects routes by Clerk role:
+  patients receive the four-tab patient app and its meal, profile and prediction flows; clinicians receive a separate
+  two-tab directory and settings shell.
+- [`mobile/src/auth/`](mobile/src/auth/) turns the Clerk user and public metadata into the app's role and optional
+  CGMacros participant ID. It is the single source for sign-in state, sign-out and API session tokens.
+- [`mobile/src/features/`](mobile/src/features/) owns session-only state: the health questionnaire, meal draft,
+  language selection and Senior Mode accessibility theme. These values are held in app memory rather than persisted to
+  the backend.
+- [`mobile/src/components/`](mobile/src/components/) holds reusable feature components for history, insights, meals,
+  predictions, profiles, settings and clinician views. [`mobile/src/data/`](mobile/src/data/) supplies the local demo
+  histories and clinician directory data used by the prototype screens.
+- [`mobile/src/api/gateway.ts`](mobile/src/api/gateway.ts) is the only mobile API client. It attaches the Clerk bearer
+  token, obtains a presigned image-upload URL, uploads the normalized meal photo, and requests readiness or prediction
+  data.
+
+### Request and data flow
+
+1. A patient signs in through Clerk. The app resolves the role from public metadata and routes to the appropriate
+   protected shell.
+2. For a meal prediction, the app captures or selects a photo, normalizes it locally to JPEG, creates a session-only
+   meal draft, and uploads the photo through a presigned storage URL.
+3. The gateway validates the Clerk JWT, verifies the assigned participant and role, then calls the existing prediction
+   service against that person's stored CGM, heart-rate and meal history.
+4. The API response supplies the predicted curve, confidence, nutrition estimate and explanation used by the prediction
+   result screen. History, insights and clinician-directory data are currently local demo presentation data unless a
+   screen explicitly calls the gateway.
+
 ## Getting started
 
 **Prerequisites:** AWS CLI with credentials, Docker, Python 3.11, Node.js (mobile app), a Clerk account. The study
@@ -117,10 +169,35 @@ study dates. The app makes the same call through the API: [docs/api.md](docs/api
 **6. Mobile app**
 
 ```bash
-cd mobile && npm ci && npx expo start
+cd mobile
+npm ci
+cp .env.example .env
+npx expo start
 ```
 
-Needs `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` in `mobile/.env`. Clerk roles and the patient-role webhook:
+### Configure the mobile app
+
+1. In `mobile/.env`, set the public values for your Clerk application and deployed gateway:
+
+   ```env
+   EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+   EXPO_PUBLIC_NUTRIX_API_URL=https://your-api-gateway.example.com
+   ```
+
+   These values are bundled into the app. Do **not** put `CLERK_SECRET_KEY`, `PMRF_API_KEY`, AWS credentials or any
+   other server secret in `mobile/.env`.
+
+2. In Clerk, enable Native API support plus email/password sign-in and email-code verification. Configure the session
+   token template to include the `role` and `pmrf_person_id` claims consumed by the mobile gateway.
+
+3. In the root `.env`, configure the matching `CLERK_JWT_ISSUER`, `CLERK_JWT_AUDIENCE` and
+   `MOBILE_DEMO_PERSON_IDS` values before deploying or running the gateway locally.
+
+4. Start Expo with `npx expo start`, then choose an iOS simulator, Android emulator, Expo Go, or web target from the
+   development server. Patient users can sign up directly; clinician and admin roles must be assigned by a trusted
+   process in Clerk.
+
+For staff-role provisioning, the trusted patient-role webhook and the full Clerk setup, see
 [docs/mobile_setup.md](docs/mobile_setup.md).
 
 ## Tests
