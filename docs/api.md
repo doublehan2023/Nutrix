@@ -2,7 +2,7 @@
 
 Every endpoint of the deployed prediction service, for the app. Testing with curl: [testing_api.md](testing_api.md).
 Infrastructure: [architecture.md](architecture.md). Field-by-field meaning of the `/predict` and `/profile` responses:
-[`model/docs/api_contract.md`](../model/docs/api_contract.md) (the model team's contract; this page notes where the
+[`model/docs/api_contract.md`](../model/docs/api_contract.md) (the model contract; this page notes where the
 deployed service differs).
 
 ## Conventions
@@ -42,7 +42,7 @@ deployed service differs).
 | `GET` | [`/v1/people/{pid}/history/days/{date}`](#get-historydaysdate) | One day of CGM, heart rate, meals and medication |
 
 The last two and the `observed` field of `/predict` come from the deployment layer (`server/`); everything else is the
-model team's service (`model/service/app.py`).
+model service (`model/service/app.py`).
 
 ### GET /healthz
 
