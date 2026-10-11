@@ -1,10 +1,12 @@
 import { Alert, Pressable, Text, View } from "react-native";
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from '@/auth/auth-provider';
 
 export default function SettingsScreen() {
   const { signOut, user } = useAuth();
+  const router = useRouter();
 
   function requestSignOut() {
     Alert.alert('Sign out?', 'You will need your email and password to access Nutrix again.', [
@@ -42,6 +44,13 @@ export default function SettingsScreen() {
           will live here.
         </Text>
       </View>
+      <Pressable accessibilityRole="button" className="app-card mt-4 flex-row items-center justify-between" onPress={() => router.push('/profile')}>
+        <View>
+          <Text className="text-base font-semibold text-ink">Health profile</Text>
+          <Text className="mt-1 text-sm text-copy">Review and edit your questionnaire answers</Text>
+        </View>
+        <Text className="text-2xl text-brand-dark">›</Text>
+      </Pressable>
       <Pressable
         accessibilityRole="button"
         onPress={requestSignOut}

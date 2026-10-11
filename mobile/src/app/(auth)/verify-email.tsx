@@ -4,11 +4,13 @@ import { useSignUp } from '@clerk/expo';
 
 import { AuthHeader, AuthScreen, ErrorMessage, Field, PrimaryButton, TextButton } from '@/components/auth/auth-ui';
 import { messageForClerkError } from '@/auth/clerk-error';
+import { useHealthQuestionnaire } from '@/features/profile/health-questionnaire-context';
 
 export default function VerifyEmailScreen() {
   const { email: rawEmail } = useLocalSearchParams<{ email?: string }>();
   const email = Array.isArray(rawEmail) ? rawEmail[0] : rawEmail ?? '';
   const { signUp, fetchStatus } = useSignUp();
+  const { beginQuestionnaire, completeQuestionnaire } = useHealthQuestionnaire();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
@@ -32,8 +34,12 @@ export default function VerifyEmailScreen() {
         router.replace('/(auth)/sign-in');
         return;
       }
+      beginQuestionnaire();
       const { error: finalizeFailure } = await signUp.finalize({ navigate: () => router.replace('/') });
-      if (finalizeFailure) setError(messageForClerkError(finalizeFailure));
+      if (finalizeFailure) {
+        completeQuestionnaire();
+        setError(messageForClerkError(finalizeFailure));
+      }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'We could not verify that code.');
     } finally {
