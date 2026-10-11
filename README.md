@@ -135,17 +135,17 @@ GitHub Actions runs the static checks and a Docker build on pull requests. More 
 
 ## Repository layout
 
-| Path | What | Owner |
-| --- | --- | --- |
-| `mobile/` | Expo / React Native app with Clerk sign-in | App team |
-| `services/clerk-role-webhook/` | Lambda that gives new sign-ups the patient role | App team |
-| `model/` | Model code, FastAPI service, Dockerfile, model docs ([model/README.md](model/README.md)). Synced from `feature/model`; do not edit here | Model team |
-| `server/` | AWS layer on the model service: person data on DynamoDB + S3, mobile sign-in gateway | Deployment |
-| `infra/` | CloudFormation stack (API Gateway, load balancer, ECS Fargate, DynamoDB, S3) | Deployment |
-| `scripts/` | Build, deploy, predict and test entry points | Deployment |
-| `ops/data/` | Dataset sync with S3, user onboarding, test-photo selection | Deployment |
-| `tests/integration/` | Tests against a running service: day-8 meals of the onboarded users, unseen hospital meal photos | Deployment |
-| `docs/` | [API reference](docs/api.md), [architecture](docs/architecture.md), [testing the API](docs/testing_api.md), [mobile setup](docs/mobile_setup.md) | Deployment |
+| Path | What |
+| --- | --- |
+| `mobile/` | Expo / React Native app with Clerk sign-in |
+| `services/clerk-role-webhook/` | Lambda that gives new sign-ups the patient role |
+| `model/` | Model code, FastAPI service, Dockerfile, model docs ([model/README.md](model/README.md)) |
+| `server/` | AWS layer on the model service: person data on DynamoDB + S3, mobile sign-in gateway |
+| `infra/` | CloudFormation stack (API Gateway, load balancer, ECS Fargate, DynamoDB, S3) |
+| `scripts/` | Build, deploy, predict and test entry points |
+| `ops/data/` | Dataset sync with S3, user onboarding, test-photo selection |
+| `tests/integration/` | Tests against a running service: day-8 meals of the onboarded users, unseen hospital meal photos |
+| `docs/` | [API reference](docs/api.md), [architecture](docs/architecture.md), [testing the API](docs/testing_api.md), [mobile setup](docs/mobile_setup.md) |
 
 ## Data
 

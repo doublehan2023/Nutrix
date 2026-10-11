@@ -1,7 +1,7 @@
 # Deployment architecture
 
 The PMRF prediction service runs on AWS (us-west-2) as one CloudFormation stack, `infra/pmrf.yaml`, deployed with
-`scripts/deploy.sh`. The service code is the model team's (`model/service/`); the AWS image adds one layer,
+`scripts/deploy.sh`. The service code is in `model/service/`; the AWS image adds one layer,
 `server/`, that keeps person data on DynamoDB + S3 instead of files.
 
 ```mermaid
@@ -53,7 +53,7 @@ flowchart LR
 
 ## Person data
 
-`server/store.py` (`DynamoPersonStore`) implements the same methods as the model team's file-based
+`server/store.py` (`DynamoPersonStore`) implements the same methods as the file-based
 `pmrf.state.PersonStore`; `server/app.py` swaps it in at start-up, so nothing in `model/` changes.
 
 | Data | Where | Layout |
