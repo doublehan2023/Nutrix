@@ -9,7 +9,9 @@ sys.path.insert(0, ROOT_DIR)
 import numpy as np, pandas as pd, torch
 from scipy import stats
 from scipy.interpolate import PchipInterpolator
-from pmrf.models.icl_transformer import ICLTransformer, EpisodeData, numeric_block, train, predict, predict_scalars, curve_to_targets, NUM_COLS
+from pmrf.models.icl_transformer import ICLTransformer, EpisodeData, numeric_block, train, predict, predict_scalars, curve_to_targets, NUM_COLS, NUM_COLS_BY_VERSION
+COLS_VERSION = os.environ.get("PMRF_NUM_COLS", "v1")          # v2 = v1 + age, sex, BMI (needs a v2-pretrained checkpoint)
+COLS = NUM_COLS_BY_VERSION[COLS_VERSION]
 from pmrf.pipeline import to_challenge_outputs, metrics, enforce_consistency
 from pmrf.features import TARGETS
 
@@ -36,7 +38,7 @@ def episode_data(prep):
     resp = np.where(cg.label.to_numpy()[:, None], prep["CURV"], np.nan)
     has = (cg.emb_idx.to_numpy() >= 0).astype(float)
     scal = np.where(cg.label.to_numpy()[:, None], cg[["dpeak", "iauc", "ttp"]].to_numpy(float), np.nan)
-    return cg, EpisodeData(numeric_block(cg), prep["PRE"], resp, prep["E"], has, cg.pid.to_numpy(), scalars=scal)
+    return cg, EpisodeData(numeric_block(cg, COLS), prep["PRE"], resp, prep["E"], has, cg.pid.to_numpy(), scalars=scal)
 
 def lib(cg, max_day):
     m = cg.label.to_numpy() & (cg.emb_idx.to_numpy() >= 0) & (cg.day.to_numpy() <= max_day)
@@ -45,8 +47,8 @@ def lib(cg, max_day):
 
 def fresh(seed):
     torch.manual_seed(seed)
-    m = ICLTransformer(img_dim=st["outer"]["E"].shape[1])
-    m.load_state_dict(torch.load(PRE_PT), strict=False)
+    m = ICLTransformer(img_dim=st["outer"]["E"].shape[1], n_num=len(COLS))
+    m.load_state_dict(torch.load(PRE_PT, map_location="cpu"), strict=False)
     return m
 
 # ------------------------------------------------------------------ inner: queries days 1-5, validate on days 6-7 (context = days 1-5)
@@ -189,7 +191,7 @@ for k in ["Population model (photo + context)", "Final ensemble"]:
     g = TE.assign(p=np.asarray(cands[k]["dpeak"])).groupby("pid")[["p", "dpeak"]].mean()
     pl[k] = float(stats.pearsonr(g.p, g.dpeak)[0])
 RES.to_csv(os.path.join(OUT, "metrics.csv"), index=False)
-summ = dict(finetune_lr=LR, head_weight=WSC, tf_sources=SRC, zero_shot_val=zero_shot_val,
+summ = dict(num_cols=COLS_VERSION, finetune_lr=LR, head_weight=WSC, tf_sources=SRC, zero_shot_val=zero_shot_val,
             lr_search={str(k[0]): dict(steps=v["steps"], vals=v["vals"], ens_val=v["ens_val"]) for k, v in lr_runs.items() if k[1] == WSC},
             search={f"lr={k[0]:g},head={k[1]:g}": dict(score=v["score"], ens_val=v["ens_val"], steps=v["steps"]) for k, v in lr_runs.items()},
             finetune_curves={str(k[0]): v["hists"] for k, v in lr_runs.items() if k[1] == WSC}, blend_weights=W, curve_weight=w_curve, band_scale=band_scale, curve_band_coverage_test=curve_cov,

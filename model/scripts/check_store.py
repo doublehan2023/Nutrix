@@ -26,7 +26,10 @@ for mid, ref in demo["meals"].items():
     row = p.meals.iloc[0]
     mt = pd.Timestamp(ref["meal"]["time"])
     m = p.meals[pd.to_datetime(p.meals.time) == mt].iloc[0]
-    resp, _ = pred.respond(p, m.photo, mt, ref["meal"]["meal_type"], state=st, photo_ref=lambda h: h.photo)
+    lk = None
+    if "meal_kcal_logged" in b["gbm"].features:                      # demo build: the logged meal calories are an input
+        lk = float(m.calories_logged) if pd.notna(m.get("calories_logged", np.nan)) else float(m.kcal)
+    resp, _ = pred.respond(p, m.photo, mt, ref["meal"]["meal_type"], state=st, photo_ref=lambda h: h.photo, logged_kcal=lk)
     a, r = resp["prediction"], ref["prediction"]
     d = dict(peak=abs(a["peak_rise_mgdl"] - r["peak_rise_mgdl"]), g60=abs(a["glucose_at_min"]["60"] - r["glucose_at_min"]["60"]),
              iauc=abs(a["iauc_0_120_mgdl_min"] - r["iauc_0_120_mgdl_min"]),

@@ -20,7 +20,9 @@ from PIL import Image, ImageOps
 S1, EMB, DATA, OUT, MODE = sys.argv[1:6]
 CUT = int(sys.argv[6]) if MODE == "fewshot" else None
 LIMIT = int(sys.argv[7] if MODE == "fewshot" else (sys.argv[6] if len(sys.argv) > 6 else 0)) if len(sys.argv) > (7 if MODE == "fewshot" else 6) else 0
-MODEL, K, WORKERS = "qwen.qwen3-vl-235b-a22b", 4, int(os.environ.get("QWEN_WORKERS", "8"))
+MODEL = os.environ.get("VLM_MODEL", "qwen.qwen3-vl-235b-a22b")      # any Bedrock vision model (e.g. us.anthropic.claude-sonnet-5-5)
+K, WORKERS = 4, int(os.environ.get("QWEN_WORKERS", "8"))
+DAYS = [int(d) for d in os.environ.get("VLM_DAYS", "").split(",") if d]  # optional: only photos from these study days
 os.makedirs(OUT, exist_ok=True)
 outp = os.path.join(OUT, "zeroshot.jsonl" if MODE == "zeroshot" else f"fewshot_c{CUT}.jsonl")
 rt = boto3.Session().client("bedrock-runtime", region_name=os.environ.get("AWS_REGION", "us-west-2"),
@@ -79,8 +81,8 @@ def parse(text):
 
 
 def call(content, max_tokens):
-    r = rt.converse(modelId=MODEL, messages=[{"role": "user", "content": content}],
-                    inferenceConfig={"maxTokens": max_tokens, "temperature": 0})
+    cfg = {"maxTokens": max_tokens} if "anthropic" in MODEL else {"maxTokens": max_tokens, "temperature": 0}   # newer Claude models reject temperature
+    r = rt.converse(modelId=MODEL, messages=[{"role": "user", "content": content}], inferenceConfig=cfg)
     return r["output"]["message"]["content"][0]["text"], r["usage"]
 
 
@@ -118,6 +120,8 @@ if os.path.exists(outp):
         except Exception:
             pass
 q = M if MODE == "zeroshot" or CUT >= 7 else M[M.day <= 7]
+if DAYS:
+    q = q[q.day.isin(DAYS)]
 todo = [i for i in q.index if int(i) not in done]
 if LIMIT:
     todo = todo[:LIMIT]

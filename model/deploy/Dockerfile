@@ -14,7 +14,7 @@ COPY pmrf/ pmrf/
 COPY service/ service/
 # The model version is baked into the image (read-only, no download at start-up). To load a version from S3 instead,
 # set PMRF_MODEL_URI=s3://<bucket>/models/<version>/ and PMRF_MODEL_DIR=/tmp/model (see DEPLOY.md).
-ARG MODEL_VERSION=v4-20261010
+ARG MODEL_VERSION=v7-20261010
 COPY deploy/model_store/${MODEL_VERSION}/ /models/current/
 
 RUN useradd --uid 10001 --create-home pmrf && mkdir -p /data && chown pmrf /data

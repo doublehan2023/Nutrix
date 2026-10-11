@@ -171,10 +171,7 @@ figure.arch .lb { fill: var(--muted); font-size: 11.5px; }
 <div class="shell">
   <nav class="toc" aria-label="Contents"><div class="inner">
     <div class="lbl">Contents</div>
-    <a href="#demo">01 · Prediction inspector</a><a href="#how">02 · How it works</a><a href="#datasets">03 · Datasets used</a>
-    <a href="#results">04 · Results</a><a href="#modalities">05 · What each input adds</a><a href="#beyond">06 · Beyond the curve</a>
-    <a href="#personal">07 · Why personalization</a><a href="#uncertainty">08 · Limits</a><a href="#vlm">09 · Vision-language pilot</a>
-    <a href="#next">10 · Next steps</a><a href="#api">11 · For the app team</a><a href="#deploy">12 · Deployment (AWS)</a>
+    <a href="#demo">01 · Prediction inspector</a><a href="#how">02 · How it works</a><a href="#datasets">03 · Datasets and inputs</a><a href="#results">04 · Results</a><a href="#t1d">05 · Type 1 diabetes (MetaboNet)</a><a href="#modalities">06 · What each input adds</a><a href="#beyond">07 · Beyond the curve</a><a href="#personal">08 · Why personalization</a><a href="#uncertainty">09 · Limits</a><a href="#vlm">10 · Upgrades we tested</a><a href="#next">11 · Next steps</a><a href="#api">12 · For the app team</a><a href="#deploy">13 · Deployment (AWS)</a>
     <a href="#tech" class="techlink" data-open-tech>⚙ Technical details</a>
   </div></nav>
 
@@ -183,7 +180,7 @@ figure.arch .lb { fill: var(--muted); font-size: 11.5px; }
       <div class="eyebrow">Internal technical report · Wellness Reimagined Challenge #3 · {{VERSION}}</div>
       <h1>PMRF: a personalized, multimodal model of post-meal glucose</h1>
       <p class="lede">From one meal photo, the last two hours of CGM and heart rate, and what it learned about the person in their first week, the model predicts the next two hours of glucose with a calibrated range, explains why, suggests diet changes for that person, and estimates their metabolic risk.</p>
-      <p class="meta">Status {{DATE}}: trained and tested on public data with the challenge protocol (learn days 1–7, predict meals from day 8 on, from the photo only). The official challenge data is not released yet; the pipeline is ready to run on it.</p>
+      <p class="meta">Status {{DATE}}: trained and tested on public data with the challenge protocol (learn days 1–7, predict meals from day 8 on, from the photo only). Both datasets named by the organizers are used: CGMacros (photos, main model) and MetaboNet (type 1 diabetes: pretraining and its own day-8 test, section 05).</p>
     </header>
 
     <div class="kpis" aria-label="Summary of results on unseen day-8+ meals">
@@ -282,48 +279,178 @@ figure.arch .lb { fill: var(--muted); font-size: 11.5px; }
     
     <section id="how" aria-labelledby="h-how">
       <div class="sec-head"><span class="sec-num">02</span><h2 id="h-how">How it works</h2></div>
-      <div class="flow">
-        <div class="stage"><h4>Inputs at prediction time</h4>
-          <div class="box"><b>Meal photo</b><span>no nutrition label needed</span></div>
-          <div class="box"><b>CGM, last 2 h</b><span>level, trend, variability</span></div>
-          <div class="box"><b>Heart rate</b><span>vs the person's resting rate</span></div>
-          <div class="box"><b>Medication</b><span>class, dose, timing, insulin on board</span></div>
-          <div class="box"><b>Days 1–7 history</b><span>meals with photos, nutrition and the curves they produced</span></div>
-        </div>
-        <div class="stage"><h4>Understand the meal</h4>
-          <div class="box"><b>MobileCLIP-S2</b><span class="mono">Apple · 36 M image params · frozen</span><span>photo → 512-d embedding</span></div>
-          <div class="box"><b>Zero-shot food tags</b><span>same model, 30 food prompts</span></div>
-          <div class="box"><b>Nutrition estimator</b><span>ridge + population and personal photo retrieval, LightGBM stacker</span></div>
-        </div>
-        <div class="stage"><h4>Predict the response</h4>
-          <div class="box"><b>LightGBM</b><span class="mono">3-seed bag · quantile + conformal</span><span>change at 15–120 min, peak, time to peak, iAUC</span></div>
-          <div class="box"><b>In-context transformer</b><span class="mono">pretrained on {{T1D_EVENTS}} T1D meals</span><span>reads the person's past meal → curve pairs, outputs the whole curve</span></div>
-          <div class="box"><b>Ensemble</b><span>weights and band chosen on days 6–7 only</span></div>
-        </div>
-        <div class="stage"><h4>Outputs</h4>
-          <div class="box"><b>Glucose at 30/60/90/120 min</b><span>plus peak, rise, time to peak, iAUC</span></div>
-          <div class="box"><b>80% range</b><span>calibrated on held-back days</span></div>
-          <div class="box"><b>Reasons</b><span>TreeSHAP factors, similar past meals</span></div>
-          <div class="box"><b>Confidence flags &amp; what-ifs</b><span>plain-language, ready for the UI</span></div>
-        </div>
+      <figure class="fig arch">
+        <div class="scroll"><svg viewBox="0 0 1300 700" role="img" aria-label="Complete framework. Top: which dataset trains which component (MobileCLIP is used as is; CGMacros photos train the nutrition estimator; CGMacros days 1-7 and BIG IDEAs train model A; MetaboNet pretrains model B and CGMacros fine-tunes it; held-back CGMacros days choose the blend). Bottom: for a new meal, the photo and the person's data flow through these components to the outputs.">
+          <defs><marker id="ah4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+                <marker id="ah4h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-hot" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+          <g font-size="12.5" fill="currentColor">
+            <text x="20" y="34" font-weight="700" class="lb">TRAINING DATA · used once, offline</text>
+            <rect class="nd" x="250" y="56" width="160" height="80" rx="6"/><text x="330" y="80" text-anchor="middle" font-weight="700">MobileCLIP-S2</text><text x="330" y="99" text-anchor="middle" class="lb">pretrained by Apple</text><text x="330" y="116" text-anchor="middle" class="lb">used as is</text>
+            <rect class="nd" x="440" y="56" width="170" height="80" rx="6"/><text x="525" y="80" text-anchor="middle" font-weight="700">CGMacros</text><text x="525" y="99" text-anchor="middle" class="lb">days 1–7 photos with</text><text x="525" y="116" text-anchor="middle" class="lb">logged nutrients</text>
+            <rect class="nd" x="640" y="56" width="220" height="80" rx="6"/><text x="750" y="80" text-anchor="middle" font-weight="700">CGMacros days 1–7</text><text x="750" y="99" text-anchor="middle" class="lb">45 people, photos, CGM, HR</text><text x="750" y="116" text-anchor="middle" class="lb">+ BIG IDEAs (15, no photos)</text>
+            <rect class="nd" x="935" y="56" width="165" height="80" rx="6"/><text x="1017" y="80" text-anchor="middle" font-weight="700">MetaboNet</text><text x="1017" y="99" text-anchor="middle" class="lb">1,085 people, 671k meals</text><text x="1017" y="116" text-anchor="middle" class="lb">CGM, carbs, insulin</text>
+            <rect class="nd" x="1120" y="56" width="160" height="80" rx="6"/><text x="1200" y="80" text-anchor="middle" font-weight="700">CGMacros</text><text x="1200" y="99" text-anchor="middle" class="lb">days 6–7 held back</text><text x="1200" y="116" text-anchor="middle" class="lb">(not used to train)</text>
+            <line x1="20" y1="236" x2="1280" y2="236" class="ln" stroke-dasharray="5 5"/>
+            <text x="20" y="266" font-weight="700" class="lb">PREDICTION · each new meal on day 8</text>
+            <rect class="nd" x="20" y="290" width="180" height="48" rx="6"/><text x="110" y="319" text-anchor="middle" font-weight="700">Meal photo</text>
+            <rect class="nd" x="20" y="352" width="180" height="44" rx="6"/><text x="110" y="379" text-anchor="middle">CGM, last 24 h</text>
+            <rect class="nd" x="20" y="408" width="180" height="44" rx="6"/><text x="110" y="435" text-anchor="middle">Heart rate</text>
+            <rect class="nd" x="20" y="464" width="180" height="44" rx="6"/><text x="110" y="491" text-anchor="middle">Time, last meal</text>
+            <rect class="nd" x="20" y="520" width="180" height="44" rx="6"/><text x="110" y="547" text-anchor="middle">Medication</text>
+            <rect class="nd" x="20" y="580" width="180" height="56" rx="6"/><text x="110" y="603" text-anchor="middle" font-weight="700">Days 1–7 of this person</text><text x="110" y="621" text-anchor="middle" class="lb">meals + their curves</text>
+            <rect class="nd" x="250" y="290" width="160" height="56" rx="6"/><text x="330" y="314" text-anchor="middle" font-weight="700">Photo encoder</text><text x="330" y="332" text-anchor="middle" class="lb">photo → 512 numbers</text>
+            <rect class="nd" x="440" y="290" width="170" height="56" rx="6"/><text x="525" y="314" text-anchor="middle" font-weight="700">Nutrition estimator</text><text x="525" y="332" text-anchor="middle" class="lb">carbs, protein, fat, kcal</text>
+            <rect class="nd" x="440" y="380" width="170" height="160" rx="6"/><text x="525" y="404" text-anchor="middle" font-weight="700">Feature builder</text>
+            <text x="525" y="426" text-anchor="middle" class="lb">70 inputs per meal:</text><text x="525" y="446" text-anchor="middle" class="lb">photo, glucose, HR,</text><text x="525" y="464" text-anchor="middle" class="lb">time, medication,</text><text x="525" y="482" text-anchor="middle" class="lb">first-week profile,</text><text x="525" y="500" text-anchor="middle" class="lb">similar past meals</text>
+            <rect class="nd nd-hot" x="680" y="290" width="200" height="104" rx="8"/><text x="780" y="315" text-anchor="middle" font-weight="700">Model A · LightGBM</text><text x="780" y="337" text-anchor="middle" class="lb">in: 70 inputs</text><text x="780" y="356" text-anchor="middle" class="lb">out: 30–120 min, peak,</text><text x="780" y="374" text-anchor="middle" class="lb">time to peak, iAUC, reasons</text>
+            <rect class="nd nd-hot" x="680" y="450" width="200" height="130" rx="8"/><text x="780" y="475" text-anchor="middle" font-weight="700">Model B · Transformer</text><text x="780" y="497" text-anchor="middle" class="lb">in: this meal + up to</text><text x="780" y="515" text-anchor="middle" class="lb">30 past meals with curves</text><text x="780" y="537" text-anchor="middle" class="lb">out: 0–120 min curve</text><text x="780" y="555" text-anchor="middle" class="lb">with 80% band</text>
+            <rect class="nd" x="950" y="380" width="130" height="110" rx="6"/><text x="1015" y="405" text-anchor="middle" font-weight="700">Blend</text><text x="1015" y="427" text-anchor="middle" class="lb">B: 65% of curve,</text><text x="1015" y="445" text-anchor="middle" class="lb">30% of peak</text><text x="1015" y="467" text-anchor="middle" class="lb">peak ≥ every point</text>
+            <rect class="nd" x="1120" y="290" width="160" height="290" rx="6"/><text x="1200" y="316" text-anchor="middle" font-weight="700">Outputs</text>
+            <text x="1200" y="342" text-anchor="middle" class="lb">G30 / 60 / 90 / 120</text><text x="1200" y="366" text-anchor="middle" class="lb">peak, rise</text><text x="1200" y="390" text-anchor="middle" class="lb">time to peak, iAUC</text>
+            <text x="1200" y="414" text-anchor="middle" class="lb">curve + 80% band</text><text x="1200" y="438" text-anchor="middle" class="lb">P(peak &gt; 140/180)</text><text x="1200" y="462" text-anchor="middle" class="lb">reasons, what-ifs</text><text x="1200" y="486" text-anchor="middle" class="lb">confidence flags</text>
+            <!-- training arrows (accent) -->
+            <line class="ln ln-hot" x1="330" y1="138" x2="330" y2="288" marker-end="url(#ah4h)"/>
+            <line class="ln ln-hot" x1="525" y1="138" x2="525" y2="288" marker-end="url(#ah4h)"/><text x="533" y="200" class="lb">trains</text>
+            <line class="ln ln-hot" x1="750" y1="138" x2="750" y2="288" marker-end="url(#ah4h)"/><text x="758" y="200" class="lb">trains</text>
+            <polyline class="ln ln-hot" points="862,110 900,110 900,520 882,520" fill="none" marker-end="url(#ah4h)"/><text x="893" y="170" text-anchor="end" class="lb">② fine-tunes B</text><text x="893" y="186" text-anchor="end" class="lb">(CGMacros only)</text>
+            <polyline class="ln ln-hot" points="990,138 990,180 925,180 925,560 882,560" fill="none" marker-end="url(#ah4h)"/><text x="932" y="202" class="lb">① pretrains B</text>
+            <polyline class="ln ln-hot" points="1200,138 1200,222 1040,222 1040,378" fill="none" marker-end="url(#ah4h)"/><text x="1048" y="214" class="lb">chooses weights</text>
+            <!-- prediction flow -->
+            <line class="ln" x1="202" y1="314" x2="248" y2="314" marker-end="url(#ah4)"/>
+            <line class="ln" x1="412" y1="318" x2="438" y2="318" marker-end="url(#ah4)"/>
+            <line class="ln" x1="525" y1="348" x2="525" y2="378" marker-end="url(#ah4)"/>
+            <line class="ln" x1="202" y1="374" x2="438" y2="420" marker-end="url(#ah4)"/>
+            <line class="ln" x1="202" y1="430" x2="438" y2="446" marker-end="url(#ah4)"/>
+            <line class="ln" x1="202" y1="486" x2="438" y2="470" marker-end="url(#ah4)"/>
+            <line class="ln" x1="202" y1="542" x2="438" y2="496" marker-end="url(#ah4)"/>
+            <line class="ln" x1="202" y1="600" x2="438" y2="522" marker-end="url(#ah4)"/>
+            <line class="ln" x1="612" y1="420" x2="678" y2="356" marker-end="url(#ah4)"/>
+            <line class="ln" x1="612" y1="500" x2="678" y2="500" marker-end="url(#ah4)"/>
+            <polyline class="ln" points="202,626 780,626 780,582" fill="none" marker-end="url(#ah4)"/><text x="490" y="618" text-anchor="middle" class="lb">past meals + their curves</text>
+            <line class="ln" x1="882" y1="350" x2="948" y2="410" marker-end="url(#ah4)"/>
+            <line class="ln" x1="882" y1="470" x2="948" y2="455" marker-end="url(#ah4)"/>
+            <line class="ln" x1="1082" y1="435" x2="1118" y2="435" marker-end="url(#ah4)"/>
+          </g></svg></div>
+        <figcaption><b>Complete framework.</b> Top: what each dataset is used for. Blue arrows show the training, done once. MetaboNet only pretrains model B. CGMacros days 1–7 then fine-tune model B and train model A and the nutrition estimator. The held-back CGMacros days 6–7 only choose the blend weights. Bottom: what happens for each new meal, using the same components. No retraining is needed per person: a new user's first week enters through the feature builder and as model B's examples.</figcaption>
+      </figure>
+      <div class="cols2">
+        <div class="tbl"><table>
+          <thead><tr><th colspan="2">Model A · LightGBM</th></tr></thead>
+          <tbody>
+            <tr><td><b>In</b></td><td>70 numbers per meal: estimated nutrients and their uncertainty, 8 image features, similarity to other photos (15) · glucose level, trend, variability, 24-h median, 3-h mean (6) · heart rate vs resting (2) · time of day, meal type, minutes since and carbs of the last meal, meals in 6 h (10) · medication: minutes since and 24-h dose of 8 classes, meal bolus, its timing, insulin on board (19) · first-week profile (12) · rise after similar past meals, own and other people's (6)</td></tr>
+            <tr><td><b>Out</b></td><td>Glucose change at 15, 30, …, 120 min; peak rise; time to peak; iAUC. Each with median, 10% and 90%, and each input's contribution to the peak rise</td></tr>
+          </tbody></table></div>
+        <div class="tbl"><table>
+          <thead><tr><th colspan="2">Model B · in-context transformer</th></tr></thead>
+          <tbody>
+            <tr><td><b>In</b></td><td>One token for the new meal: estimated nutrients, meal type, time, glucose and its trend, heart rate, last meal, insulin (when present), the 2 h of CGM before the meal, and the 512-number photo vector. Plus up to 30 tokens for the person's days 1–7 meals: the same fields, their logged nutrients and the 2-h curve each produced</td></tr>
+            <tr><td><b>Out</b></td><td>The glucose change every 5 min from 0 to 120 min (25 points) at 10%, 50% and 90%, which gives the curve and its 80% band</td></tr>
+          </tbody></table></div>
       </div>
       <p>Personalization happens in three places: a profile of the person built from days 1–7 (average rise, rise per 10 g of carbs, glucose level and variability, resting heart rate), retrieval of the person's own past meals that look like the new one together with how they responded, and the transformer, which reads those past meal–curve pairs directly as context. None of these need retraining per person, so a new user is ready as soon as their first week is uploaded.</p>
     </section>
 
 
     <section id="datasets" aria-labelledby="h-datasets">
-      <div class="sec-head"><span class="sec-num">03</span><h2 id="h-datasets">Datasets used</h2></div>
+      <div class="sec-head"><span class="sec-num">03</span><h2 id="h-datasets">Datasets and model inputs</h2></div>
+      <p>The organizers named two datasets for this challenge, <b>CGMacros</b> and <b>MetaboNet</b> (the file <code>Type1Diabetes.parquet</code>). Both are used. Three more public datasets add training people or power the risk estimates.</p>
       <div class="tbl"><table>
-        <thead><tr><th>Dataset</th><th class="num">People</th><th>What it contains</th><th>What we used it for</th><th>Access</th></tr></thead>
+        <thead><tr><th>Dataset</th><th class="num">People</th><th>Signals and structure</th><th>What it does in our system</th><th>Access</th></tr></thead>
         <tbody>
-          <tr><td><b>CGMacros</b> (PhysioNet, 2025)</td><td class="num">45</td><td>Adults without diabetes, with prediabetes and with type 2 diabetes; about 10 days each of Dexcom CGM, Fitbit heart rate, 1,706 logged meals with photos and nutrition</td><td>Main development and test set: every reported prediction result</td><td>Open, CC BY-NC-SA 4.0</td></tr>
-          <tr><td><b>BIG IDEAs Lab</b> (PhysioNet, 2026)</td><td class="num">16 ({{BIG_PEOPLE}} used)</td><td>Adults with normal glucose or prediabetes; about 10 days of Dexcom CGM, wrist heart rate and food logs with nutrition (no photos)</td><td>Extra training people for the response model ({{BIG_MEALS}} meals)</td><td>Open, ODC-By 1.0</td></tr>
-          <tr><td><b>Harmonized T1D collection</b> (9 public studies: Loop, ReplaceBG, PEDAP, CTR3, AZT1D, HUPA-UCM, BrisT1D, T1D-UOM, OhioT1DM)</td><td class="num">{{T1D_SUBJECTS}}</td><td>People with type 1 diabetes; CGM, carbohydrate entries and insulin ({{T1D_EVENTS}} meals)</td><td>Pretraining the transformer; checking the medication module</td><td>Provided file; terms of each study apply</td></tr>
-          <tr><td><b>ShanghaiT1DM / T2DM</b> (Scientific Data, 2023)</td><td class="num">112</td><td>12 type 1 and 100 type 2 patients; CGM, diet notes, insulin and oral drugs, labs, recorded complications</td><td>Complication-risk and HbA1c models</td><td>Open, CC BY 4.0</td></tr>
-          <tr><td><b>Colas et al.</b> (PLoS One, 2019)</td><td class="num">208</td><td>Adults with hypertension and no diabetes; 1–2 days of CGM at baseline, about 3 years of follow-up, 17 developed type 2 diabetes</td><td>Future type 2 diabetes risk model</td><td>Open, CC BY 4.0</td></tr>
+          <tr><td><b>CGMacros</b> · official<br><span class="muted">Das et al., Sci Data 2025</span></td><td class="num">45</td><td>Adults without diabetes, with prediabetes or type 2 diabetes, about 10 days each. One CSV per person, <b>one row per minute</b>: Dexcom and Libre glucose, Fitbit heart rate, Fitbit activity (METs, active kcal per minute). Meal rows add meal type, kcal, carbs, protein, fat, fiber and a photo (1,706 meals). <code>bio.csv</code>: age, sex, BMI, HbA1c, fasting glucose, lipids.</td><td>Trains and tests the deployed model (learn days 1–7, predict day 8 on), the photo-nutrition estimator and the demo</td><td>Open, CC BY-NC-SA 4.0</td></tr>
+          <tr><td><b>MetaboNet</b> · official<br><span class="muted">Wolff et al., J Diabetes Sci Technol 2026</span></td><td class="num">1,730 in file</td><td>People with type 1 diabetes from 15 studies, one parquet table of 132.8 million rows, <b>one row per 5 minutes</b>: CGM, carbs entered, insulin (bolus, basal, total), insulin delivery mode and device, and in some studies heart rate, steps, active calories and workouts (type, duration). Age, sex, weight.</td><td>{{T1D_EVENTS}} meals from {{T1D_SUBJECTS}} people pretrain the transformer. 339 people are the type 1 diabetes test (section 05). The insulin inputs were validated here</td><td>Provided by the organizers</td></tr>
+          <tr><td><b>BIG IDEAs Lab</b><br><span class="muted">PhysioNet 2026</span></td><td class="num">16 ({{BIG_PEOPLE}} used)</td><td>Normal glucose or prediabetes, about 10 days: Dexcom CGM (5 min), wrist heart rate, food log with nutrition, no photos</td><td>Extra training people for the response model ({{BIG_MEALS}} meals)</td><td>Open, ODC-By 1.0</td></tr>
+          <tr><td><b>ShanghaiT1DM / T2DM</b><br><span class="muted">Sci Data 2023</span></td><td class="num">112</td><td>15-min CGM, written meal records, insulin and oral drugs, labs, complications</td><td>HbA1c and complication checks only. Tested as training data and made predictions worse, so not used for them</td><td>Open, CC BY 4.0</td></tr>
+          <tr><td><b>Colas et al.</b><br><span class="muted">PLoS One 2019</span></td><td class="num">208</td><td>1–2 days of CGM, about 3 years of follow-up</td><td>Future type 2 diabetes risk tier only</td><td>Open, CC BY 4.0</td></tr>
         </tbody>
       </table></div>
-      <p class="tcap">Pretrained models used without retraining: MobileCLIP-S2 (Apple) for photos, Chronos-2 (Amazon) as a time-series baseline, Qwen2.5-VL-3B (Alibaba) in the vision-language pilot.</p>
+
+      <h3>CGMacros, column by column</h3>
+      <p>One CSV per person, one row per minute: 687,580 rows across the 45 files. Most files have the same 15 columns, and a few differ (19 distinct columns overall). Meal columns are filled only on the 1,706 meal rows.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Column</th><th>Meaning</th><th>Files</th><th class="num">Rows with a value</th><th>Example</th><th>Used?</th><th>Why not (if not used)</th></tr></thead>
+        <tbody>
+          <tr><td><code>Timestamp</code></td><td>minute</td><td>45/45</td><td class="num">100%</td><td>2020-05-02 08:18</td><td>✅</td><td></td></tr>
+          <tr><td><code>Dexcom GL</code></td><td>Dexcom G6 glucose, mg/dL (5-min, filled to 1 min)</td><td>45/45</td><td class="num">91.6%</td><td>101.8</td><td>✅ main glucose</td><td></td></tr>
+          <tr><td><code>HR</code></td><td>Fitbit heart rate, bpm</td><td>45/45</td><td class="num">88.8%</td><td>81</td><td>✅</td><td></td></tr>
+          <tr><td><code>Meal Type</code></td><td>breakfast / lunch / dinner / snack</td><td>45/45</td><td class="num">1,706 rows</td><td>Breakfast</td><td>✅</td><td></td></tr>
+          <tr><td><code>Carbs</code>, <code>Protein</code>, <code>Fat</code>, <code>Fiber</code></td><td>logged nutrients, g</td><td>45/45</td><td class="num">1,706 rows</td><td>66, 22, 10.5, 0</td><td>✅ training and history</td><td>Not used for the day-8 meal itself: there the model sees only the photo</td></tr>
+          <tr><td><code>Image path</code></td><td>photo before the meal, and after it on a later row</td><td>45/45</td><td class="num">3,197 rows</td><td>photos/…-8-18-0.jpg</td><td>✅ before-meal photo</td><td>After-meal photo not used: taken after eating, so not available at prediction time. Judging leftovers from before/after pairs would need a separate model</td></tr>
+          <tr><td><code>Libre GL</code></td><td>FreeStyle Libre Pro glucose, mg/dL (15-min, filled to 1 min)</td><td>45/45</td><td class="num">99.97%</td><td>88.4</td><td>❌</td><td>Second sensor measuring the same thing, sampled less often (15 min) and about 32 mg/dL lower. The challenge specifies 5-min CGM, so Dexcom only</td></tr>
+          <tr><td><code>METs</code></td><td>Fitbit activity intensity ×10 (10 = rest, 30 = walking)</td><td>34/45</td><td class="num">72.9%</td><td>30</td><td>❌</td><td rowspan="4">Activity comes in different forms per person: 34 METs, 11 an intensity level, 1 steps. The first version focused on the meal response, and activity after a meal is not known when predicting. Heart rate already reflects activity before the meal. Planned next</td></tr>
+          <tr><td><code>Intensity</code></td><td>activity level 0–3, instead of METs</td><td>11/45</td><td class="num">22.8%</td><td>1</td><td>❌</td></tr>
+          <tr><td><code>Calories (Activity)</code></td><td>active kcal per minute</td><td>44/45</td><td class="num">94.8%</td><td>3.15</td><td>❌</td></tr>
+          <tr><td><code>Steps</code></td><td>steps, instead of active kcal (participant 007 only)</td><td>1/45</td><td class="num">0.8%</td><td></td><td>❌</td></tr>
+          <tr><td><code>Calories</code></td><td>logged meal kcal</td><td>45/45</td><td class="num">1,706 rows</td><td>448</td><td>❌</td><td>Repeats the nutrients: kcal is computed as 4·carbs + 4·protein + 9·fat. Not available on day 8 either</td></tr>
+          <tr><td><code>Amount Consumed</code></td><td>% of the meal eaten</td><td>43/45</td><td class="num">1,642 rows</td><td>100</td><td>❌</td><td>Inconsistent: 0 on 335 meals and 200–600 on 126, so it cannot be read as a percentage</td></tr>
+          <tr><td><code>Sugar</code></td><td>sugar, g (participant 013 only)</td><td>1/45</td><td class="num">39 rows</td><td></td><td>❌</td><td>Only one person has it</td></tr>
+          <tr><td><code>Unnamed: 0</code>, <code>RecordIndex</code></td><td>row numbers</td><td>9/45, 1/45</td><td class="num"></td><td></td><td>❌</td><td>No information</td></tr>
+          <tr><td><code>bio.csv</code> (24 columns)</td><td>age, sex, BMI, HbA1c, fasting glucose and insulin, lipids, fingersticks</td><td>45/45</td><td class="num">one row per person</td><td>27 y, M, BMI 22.3, HbA1c 5.4%</td><td>⚠️ risk estimates only</td><td>Not used to predict glucose: with 45 people, one fixed value per person lets the model recognize who someone is instead of learning a pattern. The first-week profile reflects each person's response more directly, and app users may not have lab values. Age, sex and BMI are planned next</td></tr>
+          <tr><td><code>gut_health_test.csv</code> (23 columns)</td><td>22 gut-health scores, 1–3</td><td>45/45</td><td class="num">one row per person</td><td>Gut Lining Health 2</td><td>❌</td><td>One measurement per person for 45 people overfits easily, and the app cannot collect it</td></tr>
+          <tr><td><code>microbes.csv</code> (1,980 columns)</td><td>presence of 1,979 bacterial taxa</td><td>45/45</td><td class="num">one row per person</td><td>537 of 1,979 present</td><td>❌</td><td>1,979 features for 45 people overfits. Two profiling batches with different depth. The app cannot collect it</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>What the deployed model reads for one prediction</h3>
+      <p>The example values are real: participant 001, lunch on day 8 at 13:26. The logged nutrition of that lunch (40 g carbs, 76 g protein, 17 g fat) is <i>not</i> shown to the model. It sees only the photo.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Input group</th><th>Source</th><th>Exactly what goes in</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td>Meal photo</td><td>Phone photo</td><td>Estimated carbs, protein, fat, fiber, kcal and their uncertainty; 8 image features; similarity to other people's photos</td><td>34 g carbs (±12), 46 g protein, 14 g fat, 449 kcal; similarity 0.85</td></tr>
+          <tr><td>Glucose before the meal</td><td>CGM, last 24 h</td><td>Level at meal time; difference from the 24-h median; trend over 30 and 60 min; variability over 60 min; 3-h mean</td><td>110 mg/dL, 1 above the 24-h median, falling 0.5 mg/dL per min</td></tr>
+          <tr><td>Heart rate</td><td>Watch</td><td>Mean in the 30 min before the meal minus resting heart rate; highest value in the last hour minus resting</td><td>28 bpm above resting; peak 63 above resting</td></tr>
+          <tr><td>Time and earlier meals</td><td>Meal log</td><td>Time of day; meal type; minutes since the last meal; its carbs; meals in the last 6 h</td><td>Lunch, 208 min after a 66 g carb breakfast</td></tr>
+          <tr><td>Medication</td><td>Medication log</td><td>For 8 drug classes: minutes since the last dose and dose in 24 h; for insulin also the meal bolus, its timing and insulin on board</td><td>None (no CGMacros participant takes glucose-lowering drugs)</td></tr>
+          <tr><td>Personal profile</td><td>Days 1–7</td><td>Usable meals; average and median rise; rise per 10 g carbs; time to peak; mean glucose, variability, time in range, night glucose; resting heart rate</td><td>27 meals, average rise 27 mg/dL, 5.2 per 10 g carbs, resting HR 49</td></tr>
+          <tr><td>Similar meals</td><td>Days 1–7 + other people</td><td>Observed rise after the most similar-looking meals: the person's own, and other people's</td><td>Own similar meals rose 12 mg/dL (similarity 0.81); other people's 9 mg/dL</td></tr>
+          <tr><td>The person's own curves</td><td>Days 1–7</td><td>The transformer also reads up to 30 of the person's earlier meals together with the full 2-h curve each one produced</td><td>26 meals with curves</td></tr>
+        </tbody>
+      </table></div>
+      <p class="tcap">The observed rise after this lunch was 3 mg/dL. Every value is computed only from data before the meal.</p>
+
+      <div class="callout"><b>Activity: recorded, not yet used by the model.</b>
+        <ul class="plain" style="margin-top:6px">
+          <li><b>CGMacros:</b> Fitbit METs every minute and active kcal per minute. METs are stored ×10, so 10 means 1.0 MET (rest) and 30 means 3.0 (walking). 11 of 45 people have only an intensity level 0–3. There are no labelled workouts, so "how long they exercised" has to be derived from runs of high METs.</li>
+          <li><b>MetaboNet:</b> steps per 5 minutes (4 studies, 805,199 rows) and 100,873 rows inside a labelled workout (Loop, T1D-UOM, BrisT1D). Labels include Walk/Walking, Cycling, Running, High Intensity Interval Training, Swimming, Elliptical, Yoga, Stairs and strength training. Duration where recorded: median 32 min, middle half 18–52 min. Heart rate in 4 studies.</li>
+          <li>Heart rate is the only exertion signal the deployed model uses. Activity inputs and predicting the glucose response after exercise are listed under next steps.</li>
+        </ul></div>
+
+      <details><summary>Raw data examples (what the files look like)</summary>
+        <p><b>CGMacros</b>, <code>CGMacros-001.csv</code>, one row per minute. The meal row carries the nutrition and the photo path.</p>
+<pre class="json">Timestamp            Libre GL  Dexcom GL  HR  Calories (Activity)  METs  Meal Type  Calories  Carbs  Protein  Fat   Fiber  Image path
+2020-05-02 08:16:00  87.5      103.4      80  1.36                 13
+2020-05-02 08:17:00  87.9      102.6      85  3.77                 36
+2020-05-02 08:18:00  88.4      101.8      81  3.15                 30    Breakfast  448       66     22       10.5  0      photos/00000010-PHOTO-2020-5-2-8-18-0.jpg
+2020-05-02 08:19:00  88.9      101.0      80  2.52                 24</pre>
+        <p><b>MetaboNet</b>, <code>Type1Diabetes.parquet</code>, one row per 5 minutes (OhioT1DM participant 596), with a carb entry and its bolus:</p>
+<pre class="json">id   source_file  date                 CGM  carbs  bolus  basal  insulin  heartrate  steps  workout_label  insulin_delivery_modality
+596  OhioT1DM     2027-04-07 12:10:00  NaN  39.0   3.40   0.05   3.45     NaN        NaN    None           SAP
+596  OhioT1DM     2027-04-07 12:15:00  NaN  0.0    0.00   0.05   0.05     NaN        NaN    None           SAP</pre>
+        <p>…and rows inside a workout:</p>
+<pre class="json">id    source_file  date                 CGM    heartrate  steps  calories_burned  workout_label  workout_duration
+P11   BrisT1D      2023-09-30 15:55:00  162.2  98.2       474    14.7             Walk           NaN
+605   Loop         2019-04-25 12:15:00  93.0   NaN        NaN    294.0            Walking        43
+2301  T1D-UOM      2024-01-17 07:30:00  147.7  NaN        1391   43.0             Walking        15</pre>
+        <p><b>BIG IDEAs</b>, <code>Food_Log_001.csv</code>: one row per food item; items with the same start time form one meal.</p>
+<pre class="json">time_begin           logged_food          amount  unit         calorie  total_carb  sugar  protein
+2020-02-15 07:30:00  Spinach Smoothie     20      fluid ounce  308      69          38     7.2
+2020-02-15 11:02:00  Breakfast Trail Mix  0.5     cup          …</pre>
+      </details>
+
+      <h3>How the datasets are merged</h3>
+      <p>Which dataset trains which part is shown in the complete framework in section 02. The table below lists how each dataset is converted to the common format.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Step</th><th>CGMacros</th><th>MetaboNet</th><th>BIG IDEAs</th></tr></thead>
+        <tbody>
+          <tr><td>Glucose</td><td>Dexcom column, already per minute. Libre is not used: it reads about 32 mg/dL lower than Dexcom</td><td>5-min CGM; each meal becomes a window from 2 h before to 2 h after</td><td>5-min readings, filled linearly to 1 min across gaps of up to 6 min</td></tr>
+          <tr><td>Heart rate</td><td>Fitbit, per minute</td><td>Mean before the meal where recorded (type 1 track)</td><td>Empatica, per second, averaged to 1 min</td></tr>
+          <tr><td>Meals</td><td>Rows with a meal type; spelling normalized; impossible fiber entries removed; the before-meal photo</td><td>Every carb entry above 0 g</td><td>Food items with the same start time are one meal; type from time of day and kcal</td></tr>
+          <tr><td>Medication</td><td>None</td><td>Meal bolus (within 15 min), its timing, insulin on board (90-min decay), basal rate</td><td>None</td></tr>
+          <tr><td>Activity</td><td>METs, active kcal (not used yet)</td><td>Steps, workouts (not used yet)</td><td>Accelerometer (not used)</td></tr>
+          <tr><td>Labels</td><td colspan="3">Glucose at 30/60/90/120 min, peak, peak rise, time to peak, iAUC from the 2 h after the meal; meals followed by another meal within 2 h are not used as labels</td></tr>
+        </tbody>
+      </table></div>
+      <p class="tcap">Pretrained models used without retraining: MobileCLIP-S2 (Apple) for photos, Chronos-2 (Amazon) as a time-series baseline, Qwen2.5-VL-3B and Qwen3-VL-235B (Alibaba) in the vision-language tests.</p>
     </section>
 
     <section id="results" aria-labelledby="h-results">
@@ -339,14 +466,37 @@ figure.arch .lb { fill: var(--muted); font-size: 11.5px; }
         <figcaption><b>Figure 3.</b> Per meal (left) and per person (right). The model is best at telling strong responders from mild ones.</figcaption></figure>
     </section>
 
+    <section id="t1d" aria-labelledby="h-t1d">
+      <div class="sec-head"><span class="sec-num">05</span><h2 id="h-t1d">Type 1 diabetes (MetaboNet): the same day-8 task without photos</h2></div>
+      <p>MetaboNet has no meal photos, so this track uses the logged carbs. For 339 people with type 1 diabetes, the model learns from their days 1–7 and from everyone else's data, then predicts their 2,490 meals on days 8–10 (840 on day 8 itself). Inputs are logged carbs, the pre-meal CGM, insulin (meal bolus and its timing, insulin on board, basal), heart rate where recorded, time of day and the person's first-week profile. Most of these people use automated insulin delivery: 2,148 meals AID, 221 pump without automation, 38 injections.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Model</th><th class="num">30 min</th><th class="num">60 min</th><th class="num">90 min</th><th class="num">120 min</th><th class="num">Peak rise</th><th class="num">Time to peak</th><th class="num">iAUC</th></tr></thead>
+        <tbody>
+          <tr><td>Population mean (by time of day)</td><td class="num">25.6</td><td class="num">41.2</td><td class="num">48.8</td><td class="num">52.0</td><td class="num">36.4</td><td class="num">37.3</td><td class="num">2,580</td></tr>
+          <tr><td>Population model, carbs + CGM</td><td class="num">22.8</td><td class="num">36.7</td><td class="num">42.5</td><td class="num">45.2</td><td class="num">31.2</td><td class="num">33.1</td><td class="num">2,103</td></tr>
+          <tr><td>Population model + insulin</td><td class="num">22.5</td><td class="num">36.3</td><td class="num">42.0</td><td class="num">44.8</td><td class="num">30.9</td><td class="num">32.8</td><td class="num">2,070</td></tr>
+          <tr><td>Personalized (first-week profile)</td><td class="num">22.3</td><td class="num">35.4</td><td class="num">40.9</td><td class="num">43.5</td><td class="num">29.8</td><td class="num">32.3</td><td class="num">2,015</td></tr>
+          <tr><td><b>Personalized + insulin</b></td><td class="num"><b>22.0</b></td><td class="num"><b>34.9</b></td><td class="num"><b>40.4</b></td><td class="num"><b>43.3</b></td><td class="num"><b>29.5</b></td><td class="num"><b>32.3</b></td><td class="num"><b>1,988</b></td></tr>
+        </tbody>
+      </table></div>
+      <p class="tcap">Mean absolute error, mg/dL (time to peak in min, iAUC in mg/dL·min), on days 8–10.</p>
+      <ul class="plain">
+        <li><b>Personalization works in type 1 diabetes too:</b> the first-week profile lowers the peak-rise error by 1.4 mg/dL against the population model with the same inputs (95% CI 1.0 to 1.9, person-level bootstrap). Against the population average the error falls 19%, from 36.4 to 29.5.</li>
+        <li><b>Insulin helps a little on top:</b> 0.3 mg/dL (95% CI 0.02 to 0.67). The largest inputs are the pre-meal glucose, basal insulin, insulin on board and carbs.</li>
+        <li>Errors are higher than in CGMacros because rises in type 1 diabetes are larger and depend on insulin dosing. The per-person correlation between predicted and observed average rise is 0.58.</li>
+      </ul>
+      <figure class="fig"><img src="fig/t1d_day8_examples.png" alt="Eight randomly drawn day-8 meals of people with type 1 diabetes: observed curve, personalized prediction with insulin, and population prediction from carbs only" loading="lazy"><figcaption><b>Figure 4b.</b> Randomly drawn day-8 meals. Black: observed. Blue: personalized model with insulin. Grey dashed: population model from carbs only.</figcaption></figure>
+      <figure class="fig"><img src="fig/t1d_day8_models.png" alt="Error of each model on type 1 day-8 to day-10 meals" loading="lazy"><figcaption><b>Figure 4c.</b> Each step adds information: insulin, then the person's first week.</figcaption></figure>
+    </section>
+
     <section id="modalities" aria-labelledby="h-mod">
-      <div class="sec-head"><span class="sec-num">05</span><h2 id="h-mod">What each input adds</h2></div>
+      <div class="sec-head"><span class="sec-num">06</span><h2 id="h-mod">What each input adds</h2></div>
       <figure class="fig"><img src="fig/r_ablation.png" alt="Error increase when each input is removed." loading="lazy">
         <figcaption><b>Figure 4.</b> Removing one input at a time. The meal photo and the glucose before the meal matter most, then the person's own history. Heart rate does not help in this data. Medication is checked separately on type 1 diabetes data (in the technical details), because CGMacros has none.</figcaption></figure>
     </section>
 
     <section id="beyond" aria-labelledby="h-beyond">
-      <div class="sec-head"><span class="sec-num">06</span><h2 id="h-beyond">Beyond the curve: diet guidance and metabolic risk</h2></div>
+      <div class="sec-head"><span class="sec-num">07</span><h2 id="h-beyond">Beyond the curve: diet guidance and metabolic risk</h2></div>
       <div class="two">
         <div class="callout"><b>Personal diet guide.</b> Each person's carbohydrate sensitivity and the effect of adding protein or fat, measured in their own first-week standardized meals, give a carb budget per meal (rise of 50 mg/dL or less), their biggest spikes and the change that helps them most. {{GUIDE_SUMMARY}}</div>
         <div class="callout"><b>Chance of a high peak.</b> Every prediction includes the probability of going above 140 and 180 mg/dL. {{EXCEED_SUMMARY}}</div>
@@ -356,13 +506,13 @@ figure.arch .lb { fill: var(--muted); font-size: 11.5px; }
     </section>
 
     <section id="personal" aria-labelledby="h-personal">
-      <div class="sec-head"><span class="sec-num">07</span><h2 id="h-personal">Why personalization</h2></div>
+      <div class="sec-head"><span class="sec-num">08</span><h2 id="h-personal">Why personalization</h2></div>
       <figure class="fig"><img src="fig/cx_variance.png" alt="Shares of variation explained by the meal, the person and day-to-day noise." loading="lazy">
         <figcaption><b>Figure 5.</b> When everyone drinks the same breakfast shakes, who drinks it explains about 60% of the variation in the glucose rise and the recipe less than 10%; diabetes status explains only part of the person effect. Responses differ mainly in strength; most people rank meals similarly.</figcaption></figure>
     </section>
 
     <section id="uncertainty" aria-labelledby="h-unc">
-      <div class="sec-head"><span class="sec-num">08</span><h2 id="h-unc">Limits</h2></div>
+      <div class="sec-head"><span class="sec-num">09</span><h2 id="h-unc">Limits</h2></div>
       <ul class="plain">
         <li><b>Small data.</b> 45 test participants over about 10 days; one CGM brand.</li>
         <li><b>Photos.</b> Estimating carbohydrate from a single photo is still coarse for home-cooked meals.</li>
@@ -375,29 +525,35 @@ figure.arch .lb { fill: var(--muted); font-size: 11.5px; }
 
     
     <section id="vlm" aria-labelledby="h-vlm">
-      <div class="sec-head"><span class="sec-num">09</span><h2 id="h-vlm">Vision-language model pilot (Qwen2.5-VL-3B)</h2></div>
-      <p>Can a general vision-language model read nutrition from photos better than our photo model? We ran Qwen2.5-VL-3B on every meal photo on the CPU ({{VLM_SEC}} s per photo).</p>
-      
-      <ul class="plain">
-        <li><b>Accuracy.</b> Zero-shot, the 3B model underestimates carbohydrate by a median of {{VLM_BIAS}} g and is less accurate than our estimator, most of all on the standardized breakfasts and lunches, which our estimator recognises through photo retrieval. On free-living meals, averaging the two estimates is the most accurate, so the two sources are complementary.</li>
-        <li><b>What it adds.</b> Readable dish descriptions ("Caesar salad with chicken and bacon", "slice of carrot cake with cream cheese frosting") that the app could show next to the prediction.</li>
-        <li><b>Effect on glucose prediction.</b> {{VLM_INTEG}}</li>
-        <li><b>Decision.</b> {{VLM_DECISION}}</li>
-      </ul>
+      <div class="sec-head"><span class="sec-num">10</span><h2 id="h-vlm">Large vision-language models and other upgrades we tested</h2></div>
+      <p>We tested several free or event-funded upgrades against the deployed model. A change was kept only if it was clearly better on the day-8+ test, not just on week-1 validation.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Tested</th><th>Result on new meals (day 8+)</th><th>Decision</th></tr></thead>
+        <tbody>
+          <tr><td>Qwen3-VL-235B (AWS Bedrock) reading nutrition, shown the person's own logged meals as examples</td><td>Carbs error 24.0 → 22.1 g (95% CI of the change −2.7 to −1.1); calories 218 → 210 kcal (−12 to −4)</td><td>Works, but costs one paid call per photo. Off by default; can be enabled</td></tr>
+          <tr><td>Median of four vision-language models (Qwen3-VL, Mistral Large 3, Llama 4 Maverick, Nova Pro)</td><td>Better on new free-living meals, worse on repeated standardized meals; total calories unchanged</td><td>Not used</td></tr>
+          <tr><td>TabPFN v2 (tabular foundation model) averaged with LightGBM</td><td>Better on week-1 validation (−3 to −6%) but not on new day-8 recipes: the gain came from repeated meals</td><td>Not used</td></tr>
+          <tr><td>ShanghaiT1DM/T2DM as extra training people</td><td>Peak-rise error +2.5% on validation (hospital patients, 15-min Libre sensor)</td><td>Not used</td></tr>
+          <tr><td>DINOv2 photo encoders instead of MobileCLIP-S2</td><td>Within noise; DINOv2 cannot name foods</td><td>Not used</td></tr>
+          <tr><td>Qwen2.5-VL-3B on the CPU (this morning's pilot)</td><td>Underestimates carbs by a median of {{VLM_BIAS}} g; {{VLM_INTEG}}</td><td>{{VLM_DECISION}}</td></tr>
+        </tbody>
+      </table></div>
+      <p class="tcap">Lesson: days 6–7 mostly repeat meals from days 1–5, which flatters methods that recognize repeats. Every decision now also checks new recipes on day 8+.</p>
     </section>
 
 
     <section id="next" aria-labelledby="h-next">
-      <div class="sec-head"><span class="sec-num">10</span><h2 id="h-next">Next steps</h2></div>
+      <div class="sec-head"><span class="sec-num">11</span><h2 id="h-next">Next steps</h2></div>
       <ul class="plain">
-        <li>Run the same pipeline on the official challenge data as soon as it is released.</li>
-        <li>Wrap the predictor in an API for the app (endpoints below).</li>
-        <li>Improve photo-based nutrition for home-cooked meals (fine-tuning on a food-nutrition dataset, or a larger vision-language model on a GPU).</li>
+        <li><b>Activity:</b> add exercise inputs (CGMacros METs; MetaboNet steps and workouts) and predict the glucose response after exercise, not only after meals, as the organizers ask.</li>
+        <li><b>Any input format:</b> accept logged carbs or a text description when there is no photo (as in MetaboNet), and activity from a log or a watch.</li>
+        <li><b>Better portions:</b> let the user add one line of text ("half portion, no rice") for the language model to read. A single photo cannot show portion size.</li>
+        <li><b>Clinical use:</b> a clinician view of which meals and doses drive a patient's excursions, and patient-facing pre-meal warnings with the high-peak probability.</li>
       </ul>
     </section>
 
     <section id="api" aria-labelledby="h-api">
-      <div class="sec-head"><span class="sec-num">11</span><h2 id="h-api">For the app team</h2></div>
+      <div class="sec-head"><span class="sec-num">12</span><h2 id="h-api">For the app team</h2></div>
       <p>The inspector above renders exactly the JSON the prediction service returns; design against it now. Field reference: <code>docs/api_contract.md</code>; a running service also serves interactive docs at <code>/docs</code>.</p>
       <div class="tbl"><table>
         <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
@@ -413,7 +569,7 @@ figure.arch .lb { fill: var(--muted); font-size: 11.5px; }
     </section>
 
     <section id="deploy" aria-labelledby="h-deploy">
-      <div class="sec-head"><span class="sec-num">12</span><h2 id="h-deploy">Deployment plan (AWS)</h2></div>
+      <div class="sec-head"><span class="sec-num">13</span><h2 id="h-deploy">Deployment plan (AWS)</h2></div>
       <p>The deployment package is built and tested: one CPU-only Docker image (0.86 GB) that runs the endpoints above. In a container limited to 2 vCPU and 4 GB it starts in 3 seconds, uses about 1 GB of memory and answers a prediction, what-ifs included, in 252 ms (median; 374 ms at the 99th percentile), about 3.8 predictions per second per container. No GPU is needed; more containers handle more users. Setup steps for AWS: <code>DEPLOY.md</code>.</p>
       <figure class="fig arch">
         <div class="scroll"><svg viewBox="0 0 1120 550" role="img" aria-label="Architecture: the app uploads photos straight to S3 and calls the PMRF service through API Gateway; the service reads the photo from S3, keeps each person's readings and first-week state on EFS, and loads versioned models published by offline training.">
