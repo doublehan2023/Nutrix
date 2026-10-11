@@ -18,16 +18,22 @@ me = b["macro_est"]
 rel = lambda p: os.path.relpath(p, DATA) if isinstance(p, str) else None
 for pid, st in b["person_state"].items():
     p = persons[pid]
-    store.write_meta(pid, t0=str(p.t0), hist_days=7, person={}, model_version="imported-cohort", source="cgmacros",
+    inf = p.info or {}
+    person = {k: v for k, v in dict(age=inf.get("age"), bmi=inf.get("bmi"),
+                                    sex={1.0: "female", 0.0: "male"}.get(inf.get("sex_female"))).items() if v is not None and v == v}
+    store.write_meta(pid, t0=str(p.t0), hist_days=7, person=person, model_version="imported-cohort", source="cgmacros",
                      cgm_fill_gap_min=0)          # CGMacros CGM is already on a 1-min grid; keep its gaps as in training
     c = p.cgm.dropna(); h = p.hr.dropna()
     store.append_signal(pid, "cgm", pd.DataFrame(dict(timestamp=c.index, glucose_mgdl=c.to_numpy())), replace=True)
     store.append_signal(pid, "hr", pd.DataFrame(dict(timestamp=h.index, hr_bpm=h.to_numpy())), replace=True)
     m = p.meals
     store.append_signal(pid, "meals", pd.DataFrame(dict(time=m.time, meal_type=m.meal_type, carbs=m.carbs, protein=m.protein, fat=m.fat,
-                                                        fiber=m.fiber, kcal=m.kcal, photo_key=[rel(x) for x in m.photo],
+                                                        fiber=m.fiber, kcal=m.kcal, calories_logged=m.get("calories_logged", np.nan), photo_key=[rel(x) for x in m.photo],
                                                         source=np.where(p.day(m.time) <= 7, "history", "logged"))), replace=True)
     store.append_signal(pid, "meds", pd.DataFrame(columns=["time", "med_class", "dose"]), replace=True)
+    if p.act is not None or p.act_kcal is not None:                    # activity (METs, active kcal per minute) as the v7 inputs use it
+        a = pd.DataFrame(dict(mets=p.act, active_kcal=p.act_kcal)).dropna(how="all")
+        store.append_signal(pid, "activity", pd.DataFrame(dict(timestamp=a.index, mets=a.mets.to_numpy(), active_kcal=a.active_kcal.to_numpy())), replace=True)
     H = st["hist"].copy()
     H["photo_key"] = [rel(x) for x in H.photo]
     H["photo"] = H.photo_key

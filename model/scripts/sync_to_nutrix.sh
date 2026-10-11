@@ -20,3 +20,9 @@ if [ -d results/best_subjects/ui_package ]; then
   cp docs/ui_showcase_README.md "$DST/ui_showcase/README.md"
   echo "ui_showcase synced"
 fi
+# UI showcase package for model v7 (10 meals, 10 people with prediabetes or type 2 diabetes; same license note) - requested 2026-10-10
+if [ -d results/ui_showcase_v7 ]; then
+  rsync -a --delete results/ui_showcase_v7/ "$DST/ui_showcase_v7/"
+  cp docs/ui_showcase_v7_README.md "$DST/ui_showcase_v7/README.md"
+  echo "ui_showcase_v7 synced"
+fi

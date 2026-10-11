@@ -1,0 +1,133 @@
+{
+ "api_version": "0.1",
+ "model_version": "v7-20261010",
+ "person_id": "049",
+ "personalization": {
+  "history_meals": 19,
+  "your_avg_peak_rise_mgdl": 103.8,
+  "population_avg_peak_rise_mgdl": 49.3,
+  "your_rise_per_10g_carbs_mgdl": 15.0,
+  "your_mean_glucose_mgdl": 165.4,
+  "your_resting_hr_bpm": 63.0
+ },
+ "diet_guide": {
+  "available": true,
+  "method": "measured in your first-week standardized meals",
+  "target_rise_mgdl": 50.0,
+  "carb_budget_g_per_meal": 0.0,
+  "predicted_rise_per_10g_carbs_mgdl": 13.0,
+  "measured_effects": {
+   "low carb": {
+    "you_mgdl": -71.0,
+    "adjusted_mgdl": -54.4,
+    "group_mgdl": -37.8
+   },
+   "+protein": {
+    "you_mgdl": -42.2,
+    "adjusted_mgdl": -33.5,
+    "group_mgdl": -24.9
+   },
+   "+fat": {
+    "you_mgdl": -2.2,
+    "adjusted_mgdl": -5.9,
+    "group_mgdl": -9.6
+   }
+  },
+  "biggest_spikes": [
+   {
+    "time": "2025-05-12 07:05:00",
+    "meal_type": "breakfast",
+    "logged_carbs_g": 66.0,
+    "observed_rise_mgdl": 210.4,
+    "best_change": "Swap 30 g carbs for 30 g protein",
+    "options": [
+     {
+      "change": "Half the carbs",
+      "predicted_rise_mgdl": 167.6,
+      "change_vs_as_eaten_mgdl": -42.8
+     },
+     {
+      "change": "Add 20 g protein",
+      "predicted_rise_mgdl": 195.2,
+      "change_vs_as_eaten_mgdl": -15.2
+     },
+     {
+      "change": "Swap 30 g carbs for 30 g protein",
+      "predicted_rise_mgdl": 148.7,
+      "change_vs_as_eaten_mgdl": -61.7
+     }
+    ],
+    "photo_key": "photos/049_00000011.jpg"
+   },
+   {
+    "time": "2025-05-14 07:08:00",
+    "meal_type": "breakfast",
+    "logged_carbs_g": 66.0,
+    "observed_rise_mgdl": 158.0,
+    "best_change": "Swap 30 g carbs for 30 g protein",
+    "options": [
+     {
+      "change": "Half the carbs",
+      "predicted_rise_mgdl": 115.2,
+      "change_vs_as_eaten_mgdl": -42.8
+     },
+     {
+      "change": "Add 20 g protein",
+      "predicted_rise_mgdl": 142.8,
+      "change_vs_as_eaten_mgdl": -15.2
+     },
+     {
+      "change": "Swap 30 g carbs for 30 g protein",
+      "predicted_rise_mgdl": 96.3,
+      "change_vs_as_eaten_mgdl": -61.7
+     }
+    ],
+    "photo_key": "photos/049_00000033.jpg"
+   },
+   {
+    "time": "2025-05-14 12:02:00",
+    "meal_type": "lunch",
+    "logged_carbs_g": 94.0,
+    "observed_rise_mgdl": 147.2,
+    "best_change": "Swap 30 g carbs for 30 g protein",
+    "options": [
+     {
+      "change": "Half the carbs",
+      "predicted_rise_mgdl": 86.3,
+      "change_vs_as_eaten_mgdl": -60.9
+     },
+     {
+      "change": "Add 20 g protein",
+      "predicted_rise_mgdl": 132.0,
+      "change_vs_as_eaten_mgdl": -15.2
+     },
+     {
+      "change": "Swap 30 g carbs for 30 g protein",
+      "predicted_rise_mgdl": 85.5,
+      "change_vs_as_eaten_mgdl": -61.7
+     }
+    ],
+    "photo_key": "photos/049_00000038.jpg"
+   }
+  ],
+  "rise_per_10g_by_time_of_day_mgdl": {
+   "morning": 20.9,
+   "evening": 16.7
+  },
+  "note": "Based on your own week-1 standardized meals (liquid shakes, which usually raise glucose faster than solid food), adjusted toward the group average; estimates, not medical advice.",
+  "personalized": true
+ },
+ "metabolic_profile": {
+  "est_hba1c": 6.910530326934422,
+  "est_hba1c_lo": 5.8122791624295775,
+  "est_hba1c_hi": 7.68289449422303,
+  "gmi": 7.265667844155844,
+  "status": {
+   "label": "diabetes",
+   "prob": 0.7557377049180328
+  },
+  "gri_zone": "B",
+  "t2d_risk_tier": null,
+  "note": "Estimated from the first week of CGM. Research estimates, not a diagnosis."
+ }
+}

@@ -1,0 +1,378 @@
+{
+ "about": "Showcase meals of the post-meal glucose model (CGMacros, unseen days 8+). See README.md.",
+ "model_version": "v7-20261010",
+ "people": [
+  {
+   "person_id": "011",
+   "study_group": "Prediabetes",
+   "week1_meals": 28,
+   "age": 34.0,
+   "sex": "male",
+   "bmi": 29.2,
+   "input": "people/011/input_week1.json",
+   "output": "people/011/output_profile.json"
+  },
+  {
+   "person_id": "016",
+   "study_group": "Prediabetes",
+   "week1_meals": 18,
+   "age": 48.0,
+   "sex": "female",
+   "bmi": 45.9,
+   "input": "people/016/input_week1.json",
+   "output": "people/016/output_profile.json"
+  },
+  {
+   "person_id": "008",
+   "study_group": "Prediabetes",
+   "week1_meals": 21,
+   "age": 54.0,
+   "sex": "male",
+   "bmi": 39.9,
+   "input": "people/008/input_week1.json",
+   "output": "people/008/output_profile.json"
+  },
+  {
+   "person_id": "041",
+   "study_group": "Prediabetes",
+   "week1_meals": 35,
+   "age": 58.0,
+   "sex": "female",
+   "bmi": 27.9,
+   "input": "people/041/input_week1.json",
+   "output": "people/041/output_profile.json"
+  },
+  {
+   "person_id": "044",
+   "study_group": "Prediabetes",
+   "week1_meals": 30,
+   "age": 60.0,
+   "sex": "female",
+   "bmi": 35.9,
+   "input": "people/044/input_week1.json",
+   "output": "people/044/output_profile.json"
+  },
+  {
+   "person_id": "039",
+   "study_group": "T2D",
+   "week1_meals": 25,
+   "age": 45.0,
+   "sex": "female",
+   "bmi": 26.9,
+   "input": "people/039/input_week1.json",
+   "output": "people/039/output_profile.json"
+  },
+  {
+   "person_id": "005",
+   "study_group": "T2D",
+   "week1_meals": 30,
+   "age": 51.0,
+   "sex": "female",
+   "bmi": 31.0,
+   "input": "people/005/input_week1.json",
+   "output": "people/005/output_profile.json"
+  },
+  {
+   "person_id": "014",
+   "study_group": "T2D",
+   "week1_meals": 26,
+   "age": 53.0,
+   "sex": "male",
+   "bmi": 28.5,
+   "input": "people/014/input_week1.json",
+   "output": "people/014/output_profile.json"
+  },
+  {
+   "person_id": "049",
+   "study_group": "T2D",
+   "week1_meals": 19,
+   "age": 58.0,
+   "sex": "female",
+   "bmi": 36.1,
+   "input": "people/049/input_week1.json",
+   "output": "people/049/output_profile.json"
+  },
+  {
+   "person_id": "036",
+   "study_group": "T2D",
+   "week1_meals": 21,
+   "age": 61.0,
+   "sex": "male",
+   "bmi": 25.0,
+   "input": "people/036/input_week1.json",
+   "output": "people/036/output_profile.json"
+  }
+ ],
+ "meals": [
+  {
+   "meal_id": "011_1012_1854_dinner",
+   "person_id": "011",
+   "meal_type": "dinner",
+   "time": "2020-10-12T18:54:00",
+   "photo": "photos/011_00000077.jpg",
+   "file": "meals/011_1012_1854_dinner.json",
+   "predicted_peak_rise_mgdl": 48.4,
+   "logged_peak_rise_mgdl": 59.0,
+   "curve_error_mgdl": 10.8,
+   "logged_nutrition": {
+    "carbs_g": 108.0,
+    "protein_g": 33.0,
+    "fat_g": 31.0,
+    "fiber_g": 0.0,
+    "kcal": 850.0,
+    "kcal_from_macros": 843.0
+   },
+   "estimated_nutrition": {
+    "carbs_g": 88.2,
+    "protein_g": 31.2,
+    "fat_g": 27.0,
+    "fiber_g": 5.8,
+    "kcal": 720.0,
+    "carbs_uncertainty_g": 61.1
+   }
+  },
+  {
+   "meal_id": "016_0723_0738_breakfast",
+   "person_id": "016",
+   "meal_type": "breakfast",
+   "time": "2023-07-23T07:38:00",
+   "photo": "photos/016_00000070.jpg",
+   "file": "meals/016_0723_0738_breakfast.json",
+   "predicted_peak_rise_mgdl": 35.2,
+   "logged_peak_rise_mgdl": 34.0,
+   "curve_error_mgdl": 7.0,
+   "logged_nutrition": {
+    "carbs_g": 24.0,
+    "protein_g": 22.0,
+    "fat_g": 10.5,
+    "fiber_g": 0.0,
+    "kcal": 268.0,
+    "kcal_from_macros": 278.5
+   },
+   "estimated_nutrition": {
+    "carbs_g": 67.0,
+    "protein_g": 28.4,
+    "fat_g": 32.5,
+    "fiber_g": 0.2,
+    "kcal": 674.0,
+    "carbs_uncertainty_g": 2.1
+   }
+  },
+  {
+   "meal_id": "008_0206_1224_lunch",
+   "person_id": "008",
+   "meal_type": "lunch",
+   "time": "2023-02-06T12:24:00",
+   "photo": "photos/008_00000048.jpg",
+   "file": "meals/008_0206_1224_lunch.json",
+   "predicted_peak_rise_mgdl": 41.6,
+   "logged_peak_rise_mgdl": 38.2,
+   "curve_error_mgdl": 4.9,
+   "logged_nutrition": {
+    "carbs_g": 40.0,
+    "protein_g": 76.0,
+    "fat_g": 17.0,
+    "fiber_g": 13.0,
+    "kcal": 585.0,
+    "kcal_from_macros": 617.0
+   },
+   "estimated_nutrition": {
+    "carbs_g": 26.6,
+    "protein_g": 44.5,
+    "fat_g": 15.5,
+    "fiber_g": 9.9,
+    "kcal": 424.0,
+    "carbs_uncertainty_g": 11.8
+   }
+  },
+  {
+   "meal_id": "041_0504_1856_dinner",
+   "person_id": "041",
+   "meal_type": "dinner",
+   "time": "2022-05-04T18:56:00",
+   "photo": "photos/041_00000136.jpg",
+   "file": "meals/041_0504_1856_dinner.json",
+   "predicted_peak_rise_mgdl": 90.1,
+   "logged_peak_rise_mgdl": 95.6,
+   "curve_error_mgdl": 15.3,
+   "logged_nutrition": {
+    "carbs_g": 67.0,
+    "protein_g": 89.0,
+    "fat_g": 32.0,
+    "fiber_g": 5.0,
+    "kcal": 919.0,
+    "kcal_from_macros": 912.0
+   },
+   "estimated_nutrition": {
+    "carbs_g": 39.2,
+    "protein_g": 23.4,
+    "fat_g": 26.3,
+    "fiber_g": 3.4,
+    "kcal": 487.0,
+    "carbs_uncertainty_g": 31.9
+   }
+  },
+  {
+   "meal_id": "044_1026_1224_lunch",
+   "person_id": "044",
+   "meal_type": "lunch",
+   "time": "2022-10-26T12:24:00",
+   "photo": "photos/044_00000129.jpg",
+   "file": "meals/044_1026_1224_lunch.json",
+   "predicted_peak_rise_mgdl": 72.0,
+   "logged_peak_rise_mgdl": 73.0,
+   "curve_error_mgdl": 7.1,
+   "logged_nutrition": {
+    "carbs_g": 94.0,
+    "protein_g": 44.0,
+    "fat_g": 20.0,
+    "fiber_g": 4.0,
+    "kcal": 725.0,
+    "kcal_from_macros": 732.0
+   },
+   "estimated_nutrition": {
+    "carbs_g": 82.9,
+    "protein_g": 25.3,
+    "fat_g": 28.4,
+    "fiber_g": 9.5,
+    "kcal": 688.0,
+    "carbs_uncertainty_g": 7.9
+   }
+  },
+  {
+   "meal_id": "039_0216_1205_lunch",
+   "person_id": "039",
+   "meal_type": "lunch",
+   "time": "2025-02-16T12:05:00",
+   "photo": "photos/039_00000099.jpg",
+   "file": "meals/039_0216_1205_lunch.json",
+   "predicted_peak_rise_mgdl": 121.5,
+   "logged_peak_rise_mgdl": 133.6,
+   "curve_error_mgdl": 10.4,
+   "logged_nutrition": {
+    "carbs_g": 94.0,
+    "protein_g": 44.0,
+    "fat_g": 20.0,
+    "fiber_g": 4.0,
+    "kcal": 725.0,
+    "kcal_from_macros": 732.0
+   },
+   "estimated_nutrition": {
+    "carbs_g": 80.6,
+    "protein_g": 47.8,
+    "fat_g": 25.0,
+    "fiber_g": 6.6,
+    "kcal": 739.0,
+    "carbs_uncertainty_g": 23.8
+   }
+  },
+  {
+   "meal_id": "005_0825_1311_lunch",
+   "person_id": "005",
+   "meal_type": "lunch",
+   "time": "2020-08-25T13:11:00",
+   "photo": "photos/005_00000074.jpg",
+   "file": "meals/005_0825_1311_lunch.json",
+   "predicted_peak_rise_mgdl": 32.1,
+   "logged_peak_rise_mgdl": 36.4,
+   "curve_error_mgdl": 7.1,
+   "logged_nutrition": {
+    "carbs_g": 43.0,
+    "protein_g": 20.0,
+    "fat_g": 20.0,
+    "fiber_g": 13.0,
+    "kcal": 445.0,
+    "kcal_from_macros": 432.0
+   },
+   "estimated_nutrition": {
+    "carbs_g": 25.1,
+    "protein_g": 34.2,
+    "fat_g": 24.9,
+    "fiber_g": 6.2,
+    "kcal": 461.0,
+    "carbs_uncertainty_g": 10.4
+   }
+  },
+  {
+   "meal_id": "014_0516_1444_lunch",
+   "person_id": "014",
+   "meal_type": "lunch",
+   "time": "2023-05-16T14:44:00",
+   "photo": "photos/014_00000068.jpg",
+   "file": "meals/014_0516_1444_lunch.json",
+   "predicted_peak_rise_mgdl": 40.0,
+   "logged_peak_rise_mgdl": 33.4,
+   "curve_error_mgdl": 7.5,
+   "logged_nutrition": {
+    "carbs_g": 40.0,
+    "protein_g": 76.0,
+    "fat_g": 17.0,
+    "fiber_g": 13.0,
+    "kcal": 585.0,
+    "kcal_from_macros": 617.0
+   },
+   "estimated_nutrition": {
+    "carbs_g": 13.8,
+    "protein_g": 47.9,
+    "fat_g": 9.6,
+    "fiber_g": 10.0,
+    "kcal": 333.0,
+    "carbs_uncertainty_g": 11.1
+   }
+  },
+  {
+   "meal_id": "049_0519_1337_lunch",
+   "person_id": "049",
+   "meal_type": "lunch",
+   "time": "2025-05-19T13:37:00",
+   "photo": "photos/049_00000082.jpg",
+   "file": "meals/049_0519_1337_lunch.json",
+   "predicted_peak_rise_mgdl": 96.5,
+   "logged_peak_rise_mgdl": 92.2,
+   "curve_error_mgdl": 4.2,
+   "logged_nutrition": {
+    "carbs_g": 43.0,
+    "protein_g": 20.0,
+    "fat_g": 20.0,
+    "fiber_g": 13.0,
+    "kcal": 445.0,
+    "kcal_from_macros": 432.0
+   },
+   "estimated_nutrition": {
+    "carbs_g": 25.0,
+    "protein_g": 21.8,
+    "fat_g": 17.9,
+    "fiber_g": 7.5,
+    "kcal": 349.0,
+    "carbs_uncertainty_g": 21.7
+   }
+  },
+  {
+   "meal_id": "036_0407_0754_breakfast",
+   "person_id": "036",
+   "meal_type": "breakfast",
+   "time": "2022-04-07T07:54:00",
+   "photo": "photos/036_00000068.jpg",
+   "file": "meals/036_0407_0754_breakfast.json",
+   "predicted_peak_rise_mgdl": 118.1,
+   "logged_peak_rise_mgdl": 119.8,
+   "curve_error_mgdl": 8.1,
+   "logged_nutrition": {
+    "carbs_g": 24.0,
+    "protein_g": 22.0,
+    "fat_g": 10.5,
+    "fiber_g": 0.0,
+    "kcal": 268.0,
+    "kcal_from_macros": 278.5
+   },
+   "estimated_nutrition": {
+    "carbs_g": 55.7,
+    "protein_g": 31.1,
+    "fat_g": 15.6,
+    "fiber_g": 0.0,
+    "kcal": 488.0,
+    "carbs_uncertainty_g": 16.8
+   }
+  }
+ ]
+}
