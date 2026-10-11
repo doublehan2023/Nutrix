@@ -34,7 +34,7 @@ Needs `data/CGMacros` (`./ops/data/sync_data.sh pull`), AWS credentials (profile
 boto3 in `.venv`. It first deletes the two test users (`ops/data/reset_person.py`), since person data persists in
 DynamoDB + S3 between runs. Then it runs:
 
-1. The model team's end-to-end flow, 13 checks: photo upload → `/history` → `/signals` → `/predict` → `/profile`, plus
+1. The end-to-end flow, 13 checks: photo upload → `/history` → `/signals` → `/predict` → `/profile`, plus
    auth and error cases.
 2. The 5 unseen hospital meal photos for CGMacros participant 001 at day 8, 12:30, printed as a table. Full JSON:
    `tests/integration/out/hospital_meals.json`.
