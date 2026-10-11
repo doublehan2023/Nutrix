@@ -75,6 +75,21 @@ docker run --rm --cpus 2 --memory 4g -p 8080:8080 -e PMRF_API_KEY pmrf-api:$MODE
 curl localhost:8080/healthz
 ```
 
+## Deploy to AWS
+
+```bash
+set -a; . ./.env; set +a          # AWS profile, model version, CLERK_JWT_ISSUER / CLERK_JWT_AUDIENCE (required)
+./scripts/deploy.sh               # image -> ECR, CloudFormation stack create/update, waits for health checks, prints the API URL
+python -I ops/data/onboard_patients.py <api-url> data/CGMacros <ids...>   # load CGMacros participants as cgmacros-<id>
+```
+
+`deploy.sh` tags the image with the model version and the git commit, so commit first. The first deploy takes about 10 minutes; a
+release that fails its health checks rolls back automatically. `SKIP_BUILD=1` reuses a local model image.
+
+A new AWS account needs, once: the model files in an S3 bucket (`scripts/fetch_model.sh` reads `s3://nutrix-models/models/<version>/`),
+an S3 bucket for meal photos (template parameter `PhotoBucket`), and bucket names that are free (S3 names are global;
+`nutrix-person-state` is set in `infra/pmrf.yaml`). Details: [docs/architecture.md](docs/architecture.md).
+
 ## Tests
 
 Against the deployed API: [docs/testing_api.md](docs/testing_api.md).
