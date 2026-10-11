@@ -9,7 +9,8 @@ from pmrf.store import export_store
 from pmrf.vision import PhotoEncoder, FOOD_PROMPTS
 
 RES, OUT, VERSION = sys.argv[1], sys.argv[2], sys.argv[3]
-bundle = pickle.load(open(os.path.join(RES, "demo", "bundle.pkl"), "rb"))
+DEMO_DIR = sys.argv[4] if len(sys.argv) > 4 else "demo"           # e.g. demo_v7 for the v7 build
+bundle = pickle.load(open(os.path.join(RES, DEMO_DIR, "bundle.pkl"), "rb"))
 risk = pickle.load(open(os.path.join(RES, "risk", "models.pkl"), "rb"))
 prof = json.load(open(os.path.join(RES, "risk", "cgmacros_profiles.json")))
 risk["t2d_tier_reference"] = sorted(float(v["t2d_risk"]["probability"]) for v in prof.values() if v.get("t2d_risk", {}).get("available"))
@@ -19,6 +20,6 @@ text_emb = enc.encode_texts(FOOD_PROMPTS)
 w = glob.glob(os.path.expanduser("~/.cache/huggingface/hub/models--apple--MobileCLIP-S2-OpenCLIP/snapshots/*/open_clip_model.safetensors"))
 assert len(w) == 1, w
 man = export_store(bundle, os.path.join(OUT, VERSION), VERSION, w[0], text_emb, risk, effects,
-                   notes="v4: CGMacros + BIG IDEAs, MobileCLIP-S2, LightGBM x3 seeds + in-context transformer x3 seeds")
+                   notes=os.environ.get("STORE_NOTES", "v4: CGMacros + BIG IDEAs, MobileCLIP-S2, LightGBM x3 seeds + in-context transformer x3 seeds"))
 size = sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(os.path.join(OUT, VERSION)) for f in fs)
 print(f"exported {VERSION}: {len(man['files'])} files, {size / 1e6:.1f} MB")

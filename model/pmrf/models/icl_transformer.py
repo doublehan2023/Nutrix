@@ -7,6 +7,7 @@ rate, no insulin, macros only estimated) are handled with explicit masks, so one
 large T1D dataset (carbs + insulin, no photos) and fine-tuned on CGMacros (photos + macros, no insulin).
 """
 import math
+import os
 import numpy as np
 import torch
 import torch.nn as nn
@@ -16,7 +17,10 @@ NUM_COLS = ["k_carbs", "k_protein", "k_fat", "k_fiber",            # macros know
             "mt_breakfast", "mt_lunch", "mt_dinner", "mt_snack",
             "tod_sin", "tod_cos", "G0", "g0_rel24", "slope30", "slope60", "sd60",
             "hr_pre", "hr_max60", "prev_gap", "prev_carbs", "meal_bolus", "bolus_lead", "iob", "basal"]
-SCALE = dict(k_carbs=50, k_protein=30, k_fat=20, k_fiber=10, e_carbs=50, e_protein=30, e_fat=20, e_fiber=10, e_carbs_sd=30,
+NUM_COLS_V2 = NUM_COLS + ["age", "sex_female", "bmi"]          # v2 adds person descriptors (both datasets have them)
+NUM_COLS_BY_VERSION = {"v1": NUM_COLS, "v2": NUM_COLS_V2}
+DEVICE = os.environ.get("PMRF_DEVICE", "cpu")                    # training/inference device; the service runs on the CPU
+SCALE = dict(age=50, sex_female=1, bmi=30, k_carbs=50, k_protein=30, k_fat=20, k_fiber=10, e_carbs=50, e_protein=30, e_fat=20, e_fiber=10, e_carbs_sd=30,
              G0=100, g0_rel24=40, slope30=1, slope60=1, sd60=15, hr_pre=20, hr_max60=30, prev_gap=720, prev_carbs=50,
              meal_bolus=8, bolus_lead=20, iob=4, basal=1)
 QUANTILES = (0.1, 0.5, 0.9)
@@ -25,10 +29,11 @@ SCALAR_SCALE = np.array([50.0, 3000.0, 60.0], np.float32)      # peak rise (mg/d
 N_CURVE, N_PRE = 25, 25
 
 
-def numeric_block(df):
-    """(n x 2*len(NUM_COLS)) float32: scaled values with NaN->0, followed by availability masks"""
-    X = np.zeros((len(df), len(NUM_COLS)), np.float32)
-    for j, c in enumerate(NUM_COLS):
+def numeric_block(df, cols=None):
+    """(n x 2*len(cols)) float32: scaled values with NaN->0, followed by availability masks"""
+    cols = cols or NUM_COLS
+    X = np.zeros((len(df), len(cols)), np.float32)
+    for j, c in enumerate(cols):
         if c in df:
             X[:, j] = df[c].to_numpy(float) / SCALE.get(c, 1.0)
         else:
@@ -38,9 +43,10 @@ def numeric_block(df):
 
 
 class ICLTransformer(nn.Module):
-    def __init__(self, img_dim=512, d=96, heads=4, layers=3, dropout=0.1):
+    def __init__(self, img_dim=512, d=96, heads=4, layers=3, dropout=0.1, n_num=None):
         super().__init__()
-        nnum = 2 * len(NUM_COLS)
+        self.n_num = n_num or len(NUM_COLS)                              # number of numeric input columns (v1 28, v2 31)
+        nnum = 2 * self.n_num
         mlp = lambda i: nn.Sequential(nn.Linear(i, d), nn.GELU(), nn.Linear(d, d))
         self.img = nn.Linear(img_dim, d)
         self.num = mlp(nnum)
@@ -78,7 +84,7 @@ class ICLTransformer(nn.Module):
 
 
 def pinball(pred, y, mask):
-    qs = torch.tensor(QUANTILES, dtype=pred.dtype).view(1, 1, -1)
+    qs = torch.tensor(QUANTILES, dtype=pred.dtype, device=pred.device).view(1, 1, -1)
     e = y.unsqueeze(-1) - pred
     l = torch.maximum(qs * e, (qs - 1) * e)
     return (l * mask.unsqueeze(-1)).sum() / (mask.sum() * len(QUANTILES)).clamp(min=1)
@@ -120,6 +126,7 @@ def train(model, data, queries, history_of, steps, lr=3e-4, batch=128, kmax=32, 
     """queries: candidate query indices; history_of(i) -> candidate history indices for query i (same person, not i).
     mask_query_known: indices of NUM columns to blank for queries (e.g. logged macros that are unknown at prediction time)."""
     g = torch.Generator().manual_seed(seed); rng = np.random.default_rng(seed)
+    model.to(DEVICE)
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
     # schedule_steps > steps reproduces an early-stopped run exactly: same learning-rate trajectory, stopped at `steps`
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=lr, total_steps=max(steps, schedule_steps or steps), pct_start=0.05)
@@ -134,13 +141,13 @@ def train(model, data, queries, history_of, steps, lr=3e-4, batch=128, kmax=32, 
             ctx.append(rng.choice(h, k, replace=False) if k else [])
         qn = data.num[qi].clone()
         if mask_query_known is not None:
-            nn_ = len(NUM_COLS)
+            nn_ = data.num.shape[1] // 2
             qn[:, mask_query_known] = 0; qn[:, [nn_ + j for j in mask_query_known]] = 0
-        q, c, pad, y, ym = data.batch(qi, ctx, qn)
+        q, c, pad, y, ym = _to(data.batch(qi, ctx, qn))
         curve, sc = model.forward_all(q, c, pad)
         loss = pinball(curve, y, ym)
         if data.scal is not None:
-            loss = loss + scalar_weight * pinball(sc, data.scal[qi], data.scal_mask[qi])
+            loss = loss + scalar_weight * pinball(sc, data.scal[qi].to(DEVICE), data.scal_mask[qi].to(DEVICE))
         opt.zero_grad(); loss.backward(); nn.utils.clip_grad_norm_(model.parameters(), 1.0); opt.step(); sched.step()
         if val is not None and (step + 1) % val_every == 0:
             v = val(model)
@@ -153,37 +160,46 @@ def train(model, data, queries, history_of, steps, lr=3e-4, batch=128, kmax=32, 
             print(f"  step {step + 1}: train {loss.item():.4f}", flush=True)
     if best_state is not None:
         model.load_state_dict(best_state)
-    return model, hist
+    return model.to("cpu"), hist
+
+
+def _to(batch):
+    """move a (q, ctx, pad, y, ymask) batch to DEVICE"""
+    q, c, pad, y, ym = batch
+    mv = lambda d: {k: v.to(DEVICE) for k, v in d.items()}
+    return mv(q), mv(c), pad.to(DEVICE), y.to(DEVICE), ym.to(DEVICE)
 
 
 @torch.no_grad()
 def predict(model, data, q_idx, ctx_lists, mask_query_known=None, batch=256):
-    model.eval()
+    model.eval(); model.to(DEVICE)
     outs = []
     for s in range(0, len(q_idx), batch):
         qi = np.asarray(q_idx[s:s + batch]); cl = ctx_lists[s:s + batch]
         qn = data.num[qi].clone()
         if mask_query_known is not None:
-            nn_ = len(NUM_COLS)
+            nn_ = data.num.shape[1] // 2
             qn[:, mask_query_known] = 0; qn[:, [nn_ + j for j in mask_query_known]] = 0
-        q, c, pad, _, _ = data.batch(qi, cl, qn)
-        outs.append(model(q, c, pad).numpy() * CURVE_SCALE)
+        q, c, pad, _, _ = _to(data.batch(qi, cl, qn))
+        outs.append(model(q, c, pad).cpu().numpy() * CURVE_SCALE)
+    model.to("cpu")
     return np.concatenate(outs)          # (n, 25, 3) glucose change, mg/dL
 
 
 @torch.no_grad()
 def predict_scalars(model, data, q_idx, ctx_lists, mask_query_known=None, batch=256):
     """direct-head predictions (n, 3, 3): [peak rise, iAUC, time to peak] x quantiles, in natural units"""
-    model.eval()
+    model.eval(); model.to(DEVICE)
     outs = []
     for s in range(0, len(q_idx), batch):
         qi = np.asarray(q_idx[s:s + batch]); cl = ctx_lists[s:s + batch]
         qn = data.num[qi].clone()
         if mask_query_known is not None:
-            nn_ = len(NUM_COLS)
+            nn_ = data.num.shape[1] // 2
             qn[:, mask_query_known] = 0; qn[:, [nn_ + j for j in mask_query_known]] = 0
-        q, c, pad, _, _ = data.batch(qi, cl, qn)
-        outs.append(model.forward_all(q, c, pad)[1].numpy() * SCALAR_SCALE[None, :, None])
+        q, c, pad, _, _ = _to(data.batch(qi, cl, qn))
+        outs.append(model.forward_all(q, c, pad)[1].cpu().numpy() * SCALAR_SCALE[None, :, None])
+    model.to("cpu")
     return np.concatenate(outs)
 
 

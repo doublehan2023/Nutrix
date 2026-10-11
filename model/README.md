@@ -71,5 +71,15 @@ $P scripts/load_test.py <url> 1 120 out.json
 ```
 Encoder check: `bash scripts/run_dino_compare.sh` (DINOv2 S/B/L vs MobileCLIP-S2, results in `results/encoder_dino/`).
 
+Model v7 (current deployment; same accuracy as v4, more optional inputs for the app):
+
+```bash
+LOGGED_KCAL=1 bash scripts/run_v6.sh v6_demo                                     # model A with activity, age, sex, BMI, logged kcal
+.venv/bin/python -I scripts/pretrain_v2.py eda/cache/t1d_events.npz eda/cache/t1d_person_info.csv results/tf_v2   # PMRF_DEVICE=cuda, .venv-gpu
+bash scripts/run_v7.sh results/final_v6_demo v7_demo                              # transformer with age, sex, BMI (GPU) + blend
+$P scripts/export_demo.py cgmacros/CGMacros results/final_v6_demo results/final_blend_v7_demo results/demo_v7
+STORE_NOTES="v7 ..." $P scripts/export_model_store.py results deploy/model_store v7-20261010 demo_v7
+```
+
 All model choices use inner validation (days 1–5 → 6–7, rolling cut-offs in `scripts/exp_accuracy*.py`); the day-8+ test set is scored once.
 Version history: v3 results are kept in `results/final_v3`, `results/final_blend_v3`, `results/demo_v3`.

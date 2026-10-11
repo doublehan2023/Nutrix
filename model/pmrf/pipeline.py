@@ -119,6 +119,9 @@ FEATURE_GROUPS = {
     "Personal profile (days 1-7)": PROFILE_FEATURES,
     "Similar meals: your history": PERS_RETRIEVAL,
     "Similar meals: other people": POP_RETRIEVAL,
+    "Activity before meal": ["act_mets30", "act_mets120", "act_active120", "act_kcal120"],
+    "Age, sex, BMI": ["age", "sex_female", "bmi"],
+    "Logged meal calories": ["meal_kcal_logged"],
 }
 
 

@@ -13,6 +13,9 @@ IOB_TAU = 90.0                            # min, exponential decay of rapid-acti
 CONTEXT_FEATURES = ["G0", "g0_rel24", "slope30", "slope60", "sd60", "gmean3h", "hour", "tod_sin", "tod_cos",
                     "prev_gap", "prev_carbs", "n_meals_6h", "hr_pre", "hr_max60"]
 MED_FEATURES = [f"med_{c}_since" for c in MED_CLASSES] + [f"med_{c}_dose24" for c in MED_CLASSES] + ["iob", "meal_bolus", "bolus_lead"]
+ACTIVITY_FEATURES = ["act_mets30", "act_mets120", "act_active120", "act_kcal120"]   # activity before the meal only
+DEMO_FEATURES = ["age", "sex_female", "bmi"]
+LOGGED_KCAL_FEATURES = ["meal_kcal_logged"]   # demo only: the logged meal calories are not available for a day-8 meal
 PROFILE_FEATURES = ["p_n", "p_dpeak", "p_dpeak_med", "p_iauc", "p_ttp", "p_dpeak_per10g", "p_carb_slope",
                     "p_g_mean", "p_g_cv", "p_g_tir", "p_g_night", "p_hr_rest"]
 
@@ -23,7 +26,8 @@ def _window(series, t, offs):
 
 
 def resting_hr(p, days=7):
-    h = p.hr[p.day(p.hr.index) <= days].dropna()
+    dd = p.day(p.hr.index)
+    h = p.hr[(dd >= 1) & (dd <= days)].dropna()        # days 1..days of the history window
     return float(np.percentile(h, 10)) if len(h) > 500 else np.nan
 
 
@@ -93,6 +97,20 @@ def meal_table(persons, hist_days=7):
             row["hr_post"] = np.nanmean(h[60:]) - rest if np.isfinite(h[60:]).any() else np.nan     # analysis only (not known at prediction time)
             hs = h[0:61:5] - rest
             hr_seq.append(hs)
+            for c in ACTIVITY_FEATURES:                        # missing activity = NaN (the columns always exist)
+                row[c] = np.nan
+            if getattr(p, "act", None) is not None:
+                a = _window(p.act, t, np.arange(-120, 0))
+                row["act_mets30"] = np.nanmean(a[-30:]) if np.isfinite(a[-30:]).any() else np.nan
+                row["act_mets120"] = np.nanmean(a) if np.isfinite(a).any() else np.nan
+                row["act_active120"] = float(np.sum(a >= 3.0)) if np.isfinite(a).any() else np.nan     # minutes at >= 3 METs
+            if getattr(p, "act_kcal", None) is not None:
+                k = _window(p.act_kcal, t, np.arange(-120, 0))
+                row["act_kcal120"] = float(np.nansum(k)) if np.isfinite(k).any() else np.nan
+            for c in DEMO_FEATURES:
+                row[c] = (getattr(p, "info", None) or {}).get(c, np.nan)
+            cl = r.get("calories_logged", np.nan) if hasattr(r, "get") else np.nan
+            row["meal_kcal_logged"] = float(cl) if pd.notna(cl) else float(r.kcal) if pd.notna(r.kcal) else np.nan
             row["hour"] = t.hour + t.minute / 60
             row["tod_sin"], row["tod_cos"] = np.sin(2 * np.pi * row["hour"] / 24), np.cos(2 * np.pi * row["hour"] / 24)
             row["prev_gap"] = min(prev_gap[i], 720.0) if np.isfinite(prev_gap[i]) else 720.0
@@ -107,7 +125,8 @@ def meal_table(persons, hist_days=7):
 
 def cgm_profile(p, hist_days=7):
     """CGM and heart-rate descriptors of days 1..hist_days"""
-    c = p.cgm[p.day(p.cgm.index) <= hist_days].dropna()
+    dd = p.day(p.cgm.index)
+    c = p.cgm[(dd >= 1) & (dd <= hist_days)].dropna()
     night = c[(c.index.hour >= 0) & (c.index.hour < 6)]
     return dict(p_g_mean=c.mean() if len(c) else np.nan, p_g_cv=c.std() / c.mean() if len(c) else np.nan,
                 p_g_tir=float(np.mean((c >= 70) & (c <= 180))) if len(c) else np.nan,

@@ -1,4 +1,4 @@
-# Prediction API contract (v0.3)
+# Prediction API contract (v0.4)
 
 This is the shape of the JSON the prediction service will return for one meal. The demo page reads exactly this
 structure from `demo_data.json`, so UI work done against the demo carries over to the live API unchanged.
@@ -18,6 +18,12 @@ Times are the person's local wall-clock time (ISO 8601); an offset in a timestam
 | `POST` | `/v1/people/{person_id}/predict` | `{photo_key, meal_time, meal_type?, recent_cgm[]?, recent_hr[]?, log_meal (true)}` → the JSON below. `meal_time` defaults to the photo's EXIF time and `meal_type` to the time of day; `log_meal` adds the meal (estimated nutrition) to the person's log so later predictions see it as the previous meal |
 | `GET` | `/v1/people/{person_id}/profile` | Profile screen: `personalization`, `diet_guide` and `metabolic_profile` (below) |
 | `GET` | `/healthz`, `/v1/version` | Liveness and model version |
+
+**v0.4 (model v7-20261010) adds optional inputs.** Every one may be left out; the model then treats it as missing.
+- `person {age, sex, bmi}` in `/history`: age in years, `sex` = `female`/`male`, BMI in kg/m².
+- `activity[] {timestamp, mets, level, active_kcal}` in `/history` and `/signals`, and `recent_activity[]` in `/predict`. Send one reading per minute, or per interval. `mets` is the metabolic equivalent (1 = rest, about 3 = walking); give `level` 0–3 instead when only a level is known (0 sedentary, 1 light, 2 moderate, 3 vigorous). `active_kcal` is kcal per minute. Only activity before the meal is used.
+- `meals[].kcal`: the calories the user logged for a meal.
+- `logged_kcal` in `/predict`: the calories the user entered for this meal. The v7 demo model was trained with it; a real day-8 meal provides only the photo, so leave it out in that setting.
 
 Errors: `401` missing key, `404` unknown person or photo, `409` no first-week state yet or no CGM reading in the 30 min
 before the meal, `413` photo over 15 MB, `422` invalid input (message in `detail`).

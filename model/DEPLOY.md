@@ -18,10 +18,10 @@ and their first week of data. It is one CPU-only container (FastAPI). API fields
 The model files are not in git (466 MB; they live in S3). From this folder (`model/` in the team repo):
 
 ```bash
-AWS_PROFILE=<profile> python -I scripts/fetch_model_store.py      # -> deploy/model_store/v4-20261010 (checksums verified)
-docker build -f deploy/Dockerfile -t pmrf-api:v4-20261010 .
+AWS_PROFILE=<profile> python -I scripts/fetch_model_store.py      # -> deploy/model_store/v7-20261010 (checksums verified)
+docker build -f deploy/Dockerfile -t pmrf-api:v7-20261010 .
 mkdir -p /tmp/pmrf-data && chmod 777 /tmp/pmrf-data
-docker run --rm --cpus 2 --memory 4g -p 8080:8080 -v /tmp/pmrf-data:/data pmrf-api:v4-20261010
+docker run --rm --cpus 2 --memory 4g -p 8080:8080 -v /tmp/pmrf-data:/data pmrf-api:v7-20261010
 curl localhost:8080/healthz          # {"status":"ok","model_version":"v4-20261010",...}
 ```
 Interactive API docs: `http://localhost:8080/docs`.
@@ -59,9 +59,18 @@ Offline training ──> S3 (model versions) ──> new image or PMRF_MODEL_URI
 | `PMRF_API_KEY` | — | Optional shared key (`x-api-key` header) when the service is reachable without API Gateway |
 | `AWS_REGION` | — | Region of the S3 bucket |
 
+### Model versions
+
+| Version | S3 | What changed |
+|---|---|---|
+| `v7-20261010` (current, default in the image) | `s3://nutrix-models/models/v7-20261010/` | Model A also uses activity before the meal (METs, active kcal), age, sex, BMI and the logged meal calories. The transformer also uses age, sex and BMI and was re-pretrained on MetaboNet on a GPU. Accuracy on new day-8 meals is the same as v4 within noise, and the API accepts the new inputs (`docs/api_contract.md`, v0.4) |
+| `v4-20261010` | `s3://nutrix-models/models/v4-20261010/` | Photo, CGM, heart rate, time, medication and first-week inputs |
+
+Single-meal (API) predictions of v7 match the batch evaluation to a median of 0.03 mg/dL. 4 of 176 meals differ by up to 1.6 mg/dL in peak rise, because the batch run used the GPU and the service uses the CPU.
+
 ### Model artifacts in S3
 
-`v4-20261010` is uploaded to `s3://nutrix-models/models/v4-20261010/` (us-west-2; 115 files, 466 MB; bucket encrypted,
+Each version is uploaded to `s3://nutrix-models/models/<version>/`, for example `v7-20261010` (us-west-2; 115 files, 466 MB; bucket encrypted,
 private, versioned) and was verified by downloading it back and checking every file against `manifest.json`.
 To load it from S3 instead of the copy in the image: `PMRF_MODEL_URI=s3://nutrix-models/models/v4-20261010/`,
 `PMRF_MODEL_DIR=/tmp/model`, `AWS_REGION=us-west-2`.

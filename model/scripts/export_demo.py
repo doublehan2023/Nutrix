@@ -35,9 +35,9 @@ for pid in persons:
         prof.update(p_n=len(H), p_dpeak=H.dpeak.mean(), p_iauc=H.iauc.mean(), p_ttp=H.ttp.mean())
     state[pid] = dict(hist=H, profile=prof)
 bundle = dict(encoder=("MobileCLIP-S2", "datacompdr"), macro_est=outer["mest"], pca=outer["pca"], gbm=st["gbm_final"],
-              transformer_states=[torch.load(os.path.join(BL, f"transformer_seed{s}.pt")) for s in (0, 1, 2)], img_dim=E.shape[1],
+              transformer_states=[torch.load(os.path.join(BL, f"transformer_seed{s}.pt"), map_location="cpu") for s in (0, 1, 2)], img_dim=E.shape[1],
               blend_weights=summ["blend_weights"], curve_weight=summ["curve_weight"], band_scale=summ["band_scale"],
-              tf_sources=summ.get("tf_sources", {}),
+              tf_sources=summ.get("tf_sources", {}), num_cols=summ.get("num_cols", "v1"),
               lib_emb=E[libmask], lib_y=Mo.loc[libmask, ["dpeak", "iauc", "d60"]].to_numpy(float), lib_pid=Mo.pid.to_numpy()[libmask],
               person_state=state, pop_avg_rise=float(st["TR"].dpeak.mean()))
 pickle.dump(bundle, open(os.path.join(OUT, "bundle.pkl"), "wb"))
@@ -70,7 +70,8 @@ pos = {i: k for k, i in enumerate(fp["te_index"])}
 images, meals_out, diffs, lats = {}, {}, [], []
 for n, i in enumerate(pick):
     r = Mo.loc[i]; p = persons[r.pid]; H = state[r.pid]["hist"]
-    out, X, pre, e, tags, lat, sidx = pred.predict_meal(p, r.photo, r.time, r.meal_type)
+    lk = r.get("meal_kcal_logged", np.nan) if "meal_kcal_logged" in bundle["gbm"].features else None   # demo build: logged meal kcal
+    out, X, pre, e, tags, lat, sidx = pred.predict_meal(p, r.photo, r.time, r.meal_type, logged_kcal=lk)
     k = pos[i]
     diffs.append({t: abs(float(out[t][0]) - float(fp["blend"][t][k])) for t in ["G60", "dpeak", "iauc"]})
     lats.append(lat)

@@ -111,6 +111,18 @@ class MealIn(BaseModel):
     protein_g: Optional[float] = Field(None, ge=0)
     fat_g: Optional[float] = Field(None, ge=0)
     fiber_g: Optional[float] = Field(None, ge=0)
+    kcal: Optional[float] = Field(None, ge=0, le=5000, description="calories the user logged for the meal (optional)")
+
+
+class ActivityReading(BaseModel):
+    """one activity reading (per minute, or per interval): METs, or a 0-3 intensity level, and/or active kcal per minute"""
+    timestamp: str
+    mets: Optional[float] = Field(None, ge=0.5, le=25)
+    level: Optional[int] = Field(None, ge=0, le=3, description="0 sedentary, 1 light, 2 moderate, 3 vigorous; used when mets is missing")
+    active_kcal: Optional[float] = Field(None, ge=0, le=60, description="kcal per minute")
+
+
+LEVEL_TO_METS = {0: 1.2, 1: 2.5, 2: 4.5, 3: 7.0}          # as used for the CGMacros participants with a level only
 
 
 class MedIn(BaseModel):
@@ -133,6 +145,7 @@ class HistoryIn(BaseModel):
     hr: List[HRReading] = []
     meals: List[MealIn]
     meds: List[MedIn] = []
+    activity: List[ActivityReading] = []
     person: Optional[PersonInfo] = None
 
 
@@ -141,6 +154,7 @@ class SignalsIn(BaseModel):
     hr: List[HRReading] = []
     meals: List[MealIn] = Field([], description="meals eaten without a prediction (nutrition optional)")
     meds: List[MedIn] = []
+    activity: List[ActivityReading] = []
 
 
 class PredictIn(BaseModel):
@@ -149,6 +163,8 @@ class PredictIn(BaseModel):
     meal_type: Optional[Literal["breakfast", "lunch", "dinner", "snack"]] = Field(None, description="default: from the time of day")
     recent_cgm: List[CGMReading] = Field([], description="optional: CGM readings to store before predicting")
     recent_hr: List[HRReading] = []
+    recent_activity: List[ActivityReading] = []
+    logged_kcal: Optional[float] = Field(None, ge=0, le=5000, description="calories the user entered for this meal (optional; used by the demo model)")
     log_meal: bool = Field(True, description="add this meal (estimated nutrition) to the person's meal log")
 
 
@@ -162,7 +178,7 @@ def _ts(s):
     return t.tz_localize(None) if t.tzinfo is not None else t       # keep the local wall-clock time
 
 
-def _frames(cgm=(), hr=(), meals=(), meds=(), source="logged"):
+def _frames(cgm=(), hr=(), meals=(), meds=(), source="logged", activity=()):
     out = {}
     if cgm:
         out["cgm"] = pd.DataFrame(dict(timestamp=[_ts(r.timestamp) for r in cgm], glucose_mgdl=[r.glucose_mgdl for r in cgm]))
@@ -173,10 +189,15 @@ def _frames(cgm=(), hr=(), meals=(), meds=(), source="logged"):
         for m in meals:
             c, p, f = (np.nan if v is None else v for v in (m.carbs_g, m.protein_g, m.fat_g))
             rows.append(dict(time=_ts(m.timestamp), meal_type=m.meal_type, carbs=c, protein=p, fat=f,
-                             fiber=np.nan if m.fiber_g is None else m.fiber_g, kcal=4 * c + 4 * p + 9 * f, photo_key=m.photo_key, source=source))
+                             fiber=np.nan if m.fiber_g is None else m.fiber_g, kcal=4 * c + 4 * p + 9 * f,
+                             calories_logged=np.nan if m.kcal is None else m.kcal, photo_key=m.photo_key, source=source))
         out["meals"] = pd.DataFrame(rows)
     if meds:
         out["meds"] = pd.DataFrame(dict(time=[_ts(r.timestamp) for r in meds], med_class=[r.med_class for r in meds], dose=[r.dose for r in meds]))
+    if activity:
+        out["activity"] = pd.DataFrame(dict(timestamp=[_ts(r.timestamp) for r in activity],
+                                            mets=[r.mets if r.mets is not None else LEVEL_TO_METS.get(r.level, np.nan) for r in activity],
+                                            active_kcal=[np.nan if r.active_kcal is None else r.active_kcal for r in activity]))
     return out
 
 
@@ -267,7 +288,7 @@ def history(pid: str, body: HistoryIn):
     check_pid(pid)
     if not body.cgm:
         raise HTTPException(422, "cgm readings are required")
-    fr = _frames(body.cgm, body.hr, body.meals, body.meds, source="history")
+    fr = _frames(body.cgm, body.hr, body.meals, body.meds, source="history", activity=body.activity)
     missing = [m.photo_key for m in body.meals if m.photo_key]
     missing = [k for k in missing if not _photo_exists(k)]
     if missing:
@@ -276,7 +297,7 @@ def history(pid: str, body: HistoryIn):
     st = S["people"]
     st.write_meta(pid, t0=str(t0), hist_days=body.hist_days, person=(body.person.model_dump() if body.person else {}),
                   model_version=S["version"])
-    for kind in ("cgm", "hr", "meals", "meds"):
+    for kind in ("cgm", "hr", "meals", "meds", "activity"):
         st.append_signal(pid, kind, fr.get(kind, pd.DataFrame()), replace=True)
     person = st.person(pid)
     t = time.perf_counter()
@@ -299,7 +320,7 @@ def _photo_exists(key):
 @app.post("/v1/people/{pid}/signals")
 def signals(pid: str, body: SignalsIn):
     _require(pid, state=False)
-    fr = _frames(body.cgm, body.hr, body.meals, body.meds, source="logged")
+    fr = _frames(body.cgm, body.hr, body.meals, body.meds, source="logged", activity=body.activity)
     counts = {k: S["people"].append_signal(pid, k, v) for k, v in fr.items()}
     S["profile_cache"].pop(pid, None)
     return dict(person_id=pid, stored=counts)
@@ -314,8 +335,8 @@ def predict(pid: str, body: PredictIn):
         raise HTTPException(422, "meal_time is required (the photo has no EXIF time)")
     meal_type = body.meal_type or _meal_type_from_time(mt, 1000.0)
     st = S["people"]
-    if body.recent_cgm or body.recent_hr:
-        for k, v in _frames(body.recent_cgm, body.recent_hr).items():
+    if body.recent_cgm or body.recent_hr or body.recent_activity:
+        for k, v in _frames(body.recent_cgm, body.recent_hr, activity=body.recent_activity).items():
             st.append_signal(pid, k, v)
     person = st.person(pid, until=mt)
     recent = person.cgm[(person.cgm.index >= mt - pd.Timedelta("30min")) & (person.cgm.index <= mt)]
@@ -323,12 +344,13 @@ def predict(pid: str, body: PredictIn):
         raise HTTPException(409, "no CGM reading in the 30 minutes before the meal: upload recent CGM (signals or recent_cgm)")
     state = st.load_state(pid)
     with S["sem"]:
-        resp, extra = S["pred"].respond(person, img, mt, meal_type, state=state)
+        resp, extra = S["pred"].respond(person, img, mt, meal_type, state=state, logged_kcal=body.logged_kcal)
     resp["model_version"] = S["version"]
     if body.log_meal:
         X = extra["X"].iloc[0]
         st.append_signal(pid, "meals", pd.DataFrame([dict(time=mt, meal_type=meal_type, carbs=X.est_carbs, protein=X.est_protein, fat=X.est_fat,
-                                                          fiber=X.est_fiber, kcal=X.est_kcal, photo_key=body.photo_key, source="predicted")]))
+                                                          fiber=X.est_fiber, kcal=X.est_kcal, photo_key=body.photo_key, source="predicted",
+                                                          calories_logged=np.nan if body.logged_kcal is None else body.logged_kcal)]))
     return _clean(resp)
 
 
