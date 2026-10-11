@@ -9,11 +9,13 @@ import { PredictionDrivers } from '@/components/prediction/prediction-drivers';
 import { PredictionHeader } from '@/components/prediction/prediction-header';
 import { useMealDraft } from '@/features/meals/meal-draft-context';
 import { useLanguage } from '@/features/localization/language-context';
+import { usePatientTheme } from '@/features/accessibility/senior-mode-context';
 
 export default function PredictionScreen() {
   const router = useRouter();
   const { discardDraft, prediction } = useMealDraft();
   const { t } = useLanguage();
+  const { cardStyle, colors, primaryButtonStyle, text } = usePatientTheme();
 
   useEffect(() => {
     if (!prediction) router.replace('/(tabs)');
@@ -46,7 +48,7 @@ export default function PredictionScreen() {
   }
 
   return (
-    <SafeAreaView className="app-screen" edges={['top']}>
+    <SafeAreaView className="app-screen" edges={['top']} style={{ backgroundColor: colors.background }}>
       <ScrollView contentContainerClassName="px-5 pb-12">
         <PredictionHeader onBack={() => router.back()} title={t('mealPrediction')} />
         <PredictionChart
@@ -62,15 +64,15 @@ export default function PredictionScreen() {
           <MetricCard label="2h iAUC" unit="mg·min/dL" value={Math.round(prediction.prediction.iauc_0_120_mgdl_min).toLocaleString()} />
         </View>
 
-        <View className="app-card mt-4">
-          <Text className="text-base font-semibold text-ink">{t('glucoseAfterMeal')}</Text>
-          <Text className="mt-1 text-sm text-copy">{t('predictedObserved')}</Text>
+        <View className="app-card mt-4" style={cardStyle}>
+          <Text className="text-base font-semibold text-ink" style={[text.body, { color: colors.foreground }]}>{t('glucoseAfterMeal')}</Text>
+          <Text className="mt-1 text-sm text-copy" style={[text.label, { color: colors.mutedForeground }]}>{t('predictedObserved')}</Text>
           <View className="mt-4 flex-row justify-between">
             {comparisonRows.map((row) => (
               <View className="items-center" key={row.minute}>
-                <Text className="text-xs text-copy">{row.minute}</Text>
-                <Text className="mt-1 text-2xl font-semibold text-prediction">{Math.round(row.predicted)}</Text>
-                {row.observed !== undefined ? <Text className="mt-1 text-xs font-medium text-glucose">obs {Math.round(row.observed)}</Text> : null}
+                <Text className="text-xs text-copy" style={[text.caption, { color: colors.mutedForeground }]}>{row.minute}</Text>
+                <Text className="mt-1 text-2xl font-semibold text-prediction" style={[text.reading, { color: colors.medication }]}>{Math.round(row.predicted)}</Text>
+                {row.observed !== undefined ? <Text className="mt-1 text-xs font-medium text-glucose" style={[text.caption, { color: colors.success }]}>obs {Math.round(row.observed)}</Text> : null}
               </View>
             ))}
           </View>
@@ -78,18 +80,18 @@ export default function PredictionScreen() {
 
         <PredictionDrivers drivers={drivers} />
 
-        <View className="mt-4 rounded-card bg-status-low px-5 py-4">
-          <Text className="text-base font-semibold text-on-secondary">{t('confidence')}: {prediction.confidence.level}</Text>
-          <Text className="mt-1 text-sm leading-5 text-on-secondary">
+        <View className="mt-4 rounded-card bg-status-low px-5 py-4" style={{ backgroundColor: colors.statusLow }}>
+          <Text className="text-base font-semibold text-on-secondary" style={[text.body, { color: colors.onSecondary }]}>{t('confidence')}: {prediction.confidence.level}</Text>
+          <Text className="mt-1 text-sm leading-5 text-on-secondary" style={[text.label, { color: colors.onSecondary }]}>
             {prediction.confidence.flags.length ? prediction.confidence.flags.join(' · ') : 'Personalized from your available data.'}
           </Text>
         </View>
 
-        <Text className="mt-5 text-center text-xs leading-5 text-copy">
+        <Text className="mt-5 text-center text-xs leading-5 text-copy" style={[text.caption, { color: colors.mutedForeground }]}>
           This is a demonstration estimate and not medical advice.
         </Text>
-        <Pressable accessibilityRole="button" className="app-button-primary mt-5" onPress={returnHome}>
-          <Text className="text-lg font-bold text-on-brand">{t('goHome')}</Text>
+        <Pressable accessibilityRole="button" className="app-button-primary mt-5" onPress={returnHome} style={primaryButtonStyle}>
+          <Text className="text-lg font-bold text-on-brand" style={[text.button, { color: colors.onPrimary }]}>{t('goHome')}</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>

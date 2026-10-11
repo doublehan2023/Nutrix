@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal, Platform, Pressable, Text, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { usePatientTheme } from '@/features/accessibility/senior-mode-context';
 
 type MealTimeFieldProps = {
   onChange: (time: Date) => void;
@@ -24,6 +25,7 @@ function formatMealTime(time: Date) {
 
 export function MealTimeField({ onChange, value }: MealTimeFieldProps) {
   const [pickerVisible, setPickerVisible] = useState(false);
+  const { cardStyle, colors, controlStyle, text } = usePatientTheme();
 
   function handleChange(_: unknown, selectedTime?: Date) {
     if (selectedTime) {
@@ -36,10 +38,10 @@ export function MealTimeField({ onChange, value }: MealTimeFieldProps) {
   }
 
   return (
-    <View className="app-card flex-1">
-      <Text className="app-card-title">Meal date & time</Text>
-      <Pressable accessibilityRole="button" className="mt-3 rounded-card bg-canvas px-4 py-4" onPress={() => setPickerVisible(true)}>
-        <Text className="text-base font-semibold text-ink">{formatMealTime(value)}</Text>
+    <View className="app-card flex-1" style={cardStyle}>
+      <Text className="app-card-title" style={[text.cardTitle, { color: colors.foreground }]}>Meal date & time</Text>
+      <Pressable accessibilityRole="button" className="mt-3 rounded-card px-4 py-4" onPress={() => setPickerVisible(true)} style={[controlStyle, { backgroundColor: colors.background }]}>
+        <Text className="font-semibold text-ink" style={[text.body, { color: colors.foreground }]}>{formatMealTime(value)}</Text>
       </Pressable>
       <View className="mt-2 gap-1">
         {demoMealTimes.map((demo) => (
@@ -49,17 +51,17 @@ export function MealTimeField({ onChange, value }: MealTimeFieldProps) {
             className="rounded-lg px-1 py-1 active:bg-line"
             key={demo.label}
             onPress={() => onChange(demo.time)}>
-            <Text className="text-xs font-semibold text-brand-dark">{demo.label}</Text>
+            <Text className="font-semibold text-brand-dark" style={[text.caption, { color: colors.onPrimarySoft }]}>{demo.label}</Text>
           </Pressable>
         ))}
       </View>
       <Modal animationType="slide" onRequestClose={() => setPickerVisible(false)} transparent visible={pickerVisible && Platform.OS === 'ios'}>
         <View className="flex-1 justify-end bg-black/30">
-          <View className="rounded-t-[28px] bg-surface p-5">
+          <View className="rounded-t-[28px] bg-surface p-5" style={{ backgroundColor: colors.card }}>
             <View className="flex-row items-center justify-between">
-              <Text className="app-card-title">Meal date & time</Text>
+              <Text className="app-card-title" style={[text.cardTitle, { color: colors.foreground }]}>Meal date & time</Text>
               <Pressable accessibilityRole="button" onPress={() => setPickerVisible(false)}>
-                <Text className="text-base font-bold text-brand-dark">Done</Text>
+                <Text className="font-bold text-brand-dark" style={[text.body, { color: colors.onPrimarySoft }]}>Done</Text>
               </Pressable>
             </View>
             <DateTimePicker display="spinner" mode="datetime" onChange={handleChange} value={value} />

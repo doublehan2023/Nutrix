@@ -1,7 +1,7 @@
 import { Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
 
-import { colors } from '../../../constants/theme';
+import { usePatientTheme } from '@/features/accessibility/senior-mode-context';
 
 export type GlucoseChartData = {
   lowerBound: readonly number[];
@@ -29,29 +29,31 @@ function buildLinePath(values: readonly number[], toX: (index: number) => number
 }
 
 function ChartLegend() {
+  const { colors, text } = usePatientTheme();
   return (
     <View className="mt-3 flex-row flex-wrap gap-x-5 gap-y-2">
       <View className="flex-row items-center">
-        <View className="mr-2 h-1 w-5 rounded-full bg-medication" />
-        <Text className="text-sm text-copy">Predicted</Text>
+        <View className="mr-2 h-1 w-5 rounded-full" style={{ backgroundColor: colors.medication }} />
+        <Text className="text-sm text-copy" style={[text.label, { color: colors.mutedForeground }]}>Predicted</Text>
       </View>
       <View className="flex-row items-center">
-        <View className="mr-2 h-1 w-5 rounded-full bg-glucose" />
-        <Text className="text-sm text-copy">Observed</Text>
+        <View className="mr-2 h-1 w-5 rounded-full" style={{ backgroundColor: colors.success }} />
+        <Text className="text-sm text-copy" style={[text.label, { color: colors.mutedForeground }]}>Observed</Text>
       </View>
       <View className="flex-row items-center">
-        <View className="mr-2 h-3 w-4 rounded bg-accent" />
-        <Text className="text-sm text-copy">Uncertainty</Text>
+        <View className="mr-2 h-3 w-4 rounded" style={{ backgroundColor: colors.accent }} />
+        <Text className="text-sm text-copy" style={[text.label, { color: colors.mutedForeground }]}>Uncertainty</Text>
       </View>
       <View className="flex-row items-center">
-        <View className="mr-2 h-3 w-3 rounded-full border-2 border-medication bg-surface" />
-        <Text className="text-sm text-copy">Model peak</Text>
+        <View className="mr-2 h-3 w-3 rounded-full border-2 bg-surface" style={{ borderColor: colors.medication }} />
+        <Text className="text-sm text-copy" style={[text.label, { color: colors.mutedForeground }]}>Model peak</Text>
       </View>
     </View>
   );
 }
 
 export function PredictionChart({ data, day, peakGlucose, timeToPeak }: PredictionChartProps) {
+  const { cardStyle, colors, isSeniorMode, text } = usePatientTheme();
   const { width } = useWindowDimensions();
   const xLabelIndexes = [0, 0.25, 0.5, 0.75, 1].map((fraction) =>
     Math.round((data.minutes.length - 1) * fraction),
@@ -78,8 +80,8 @@ export function PredictionChart({ data, day, peakGlucose, timeToPeak }: Predicti
   ].join(' ');
 
   return (
-    <View className="app-card-lg">
-      <Text className="text-xl font-semibold text-ink">Predicted vs observed · Day {day}</Text>
+    <View className="app-card-lg" style={cardStyle}>
+      <Text className="text-xl font-semibold text-ink" style={[text.cardTitle, { color: colors.foreground }]}>Predicted vs observed · Day {day}</Text>
       <ChartLegend />
       <View className="mt-2 items-center">
         <Svg height={chartHeight} width={chartWidth} accessibilityLabel={`Predicted and observed glucose chart for Day ${day}`}>
@@ -98,7 +100,7 @@ export function PredictionChart({ data, day, peakGlucose, timeToPeak }: Predicti
           {yTicks.map((tick) => (
             <SvgText
               fill={colors.mutedForeground}
-              fontSize={11}
+              fontSize={isSeniorMode ? 13 : 11}
               key={tick}
               textAnchor="end"
               x={chartPadding.left - 6}
@@ -118,7 +120,7 @@ export function PredictionChart({ data, day, peakGlucose, timeToPeak }: Predicti
           <Circle cx={peakX} cy={toY(peakGlucose)} fill={colors.card} r={5} stroke={colors.medication} strokeWidth={3} />
           <SvgText
             fill={colors.medication}
-            fontSize={11}
+            fontSize={isSeniorMode ? 13 : 11}
             fontWeight="600"
             textAnchor="middle"
             x={peakX}
@@ -128,7 +130,7 @@ export function PredictionChart({ data, day, peakGlucose, timeToPeak }: Predicti
           {xLabelIndexes.map((index) => (
             <SvgText
               fill={colors.mutedForeground}
-              fontSize={11}
+              fontSize={isSeniorMode ? 13 : 11}
               key={data.minutes[index]}
               textAnchor="middle"
               x={toX(index)}
@@ -147,7 +149,7 @@ export function PredictionChart({ data, day, peakGlucose, timeToPeak }: Predicti
           ))}
         </Svg>
       </View>
-      <Text className="mt-2 text-xs leading-4 text-copy">
+      <Text className="mt-2 text-xs leading-4 text-copy" style={[text.caption, { color: colors.mutedForeground }]}>
         The dashed line is a 5-minute average trajectory. The model predicts the peak independently, so it may sit above the curve.
       </Text>
     </View>

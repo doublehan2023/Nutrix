@@ -16,16 +16,18 @@ import {
   type ManagementOption,
 } from '@/features/profile/health-questionnaire-context';
 import { useLanguage } from '@/features/localization/language-context';
+import { usePatientTheme } from '@/features/accessibility/senior-mode-context';
 
 function toggleItem<T extends string>(items: T[], value: T) {
   return items.includes(value) ? items.filter((item) => item !== value) : [...items, value];
 }
 
 function ProfileValue({ label, value }: { label: string; value?: string }) {
+  const { colors, text } = usePatientTheme();
   return (
-    <View className="min-w-[45%] flex-1 rounded-card bg-canvas p-4">
-      <Text className="text-sm text-copy">{label}</Text>
-      <Text className="mt-1 text-base font-semibold text-ink">{value || 'Not provided'}</Text>
+    <View className="min-w-[45%] flex-1 rounded-card bg-canvas p-4" style={{ backgroundColor: colors.background }}>
+      <Text className="text-sm text-copy" style={[text.label, { color: colors.mutedForeground }]}>{label}</Text>
+      <Text className="mt-1 text-base font-semibold text-ink" style={[text.body, { color: colors.foreground }]}>{value || 'Not provided'}</Text>
     </View>
   );
 }
@@ -34,6 +36,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { answers, updateAnswers } = useHealthQuestionnaire();
   const { t } = useLanguage();
+  const { cardStyle, colors, controlStyle, primaryButtonStyle, text } = usePatientTheme();
   const [editing, setEditing] = useState(false);
 
   function save() {
@@ -41,25 +44,26 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView className="app-screen" edges={['top']}>
+    <SafeAreaView className="app-screen" edges={['top']} style={{ backgroundColor: colors.background }}>
       <ScrollView contentContainerClassName="px-5 pb-12" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View className="flex-row items-center py-5">
           <Pressable
             accessibilityLabel={t('backToSettings')}
             accessibilityRole="button"
             className="mr-3 h-10 w-10 items-center justify-center rounded-full active:bg-line"
-            onPress={() => router.replace('/(tabs)/settings')}>
-            <Text className="-mt-1 text-4xl font-light leading-none text-ink">‹</Text>
+            onPress={() => router.replace('/(tabs)/settings')}
+            style={controlStyle}>
+            <Text className="-mt-1 text-4xl font-light leading-none text-ink" style={{ color: colors.foreground }}>‹</Text>
           </Pressable>
-          <Text className="text-3xl font-bold tracking-tight text-ink">{t('healthProfile')}</Text>
+          <Text className="text-3xl font-bold tracking-tight text-ink" style={[text.pageTitle, { color: colors.foreground }]}>{t('healthProfile')}</Text>
         </View>
 
         {!editing ? (
           <>
-            <View className="app-card">
+            <View className="app-card" style={cardStyle}>
               <View className="flex-row items-center justify-between">
-                <Text className="text-xl font-bold text-ink">{t('aboutYou')}</Text>
-                <Text className="rounded-full bg-brand-soft px-3 py-1 text-xs font-bold text-brand-dark">{t('sessionOnly')}</Text>
+                <Text className="text-xl font-bold text-ink" style={[text.cardTitle, { color: colors.foreground }]}>{t('aboutYou')}</Text>
+                <Text className="rounded-full bg-brand-soft px-3 py-1 text-xs font-bold text-brand-dark" style={[text.caption, { backgroundColor: colors.primarySoft, color: colors.onPrimarySoft }]}>{t('sessionOnly')}</Text>
               </View>
               <View className="mt-5 flex-row flex-wrap gap-3">
                 <ProfileValue label="Age" value={answers.age ? `${answers.age} years` : undefined} />
@@ -68,27 +72,27 @@ export default function ProfileScreen() {
                 <ProfileValue label="Gender" value={answers.gender} />
                 {answers.gender === 'Female' ? <ProfileValue label="Pregnancy" value={answers.isPregnant} /> : null}
               </View>
-              <Text className="mt-5 text-sm text-copy">{t('ethnicity')}</Text>
-              <Text className="mt-1 text-base font-semibold text-ink">{answers.ethnicity.join(', ') || t('notProvided')}</Text>
+              <Text className="mt-5 text-sm text-copy" style={[text.label, { color: colors.mutedForeground }]}>{t('ethnicity')}</Text>
+              <Text className="mt-1 text-base font-semibold text-ink" style={[text.body, { color: colors.foreground }]}>{answers.ethnicity.join(', ') || t('notProvided')}</Text>
             </View>
 
-            <View className="app-card mt-4">
-              <Text className="text-xl font-bold text-ink">{t('diabetesHistory')}</Text>
+            <View className="app-card mt-4" style={cardStyle}>
+              <Text className="text-xl font-bold text-ink" style={[text.cardTitle, { color: colors.foreground }]}>{t('diabetesHistory')}</Text>
               <View className="mt-5 flex-row flex-wrap gap-3">
                 <ProfileValue label="Diabetes type" value={answers.diabetesType} />
               </View>
-              <Text className="mt-5 text-sm text-copy">{t('management')}</Text>
-              <Text className="mt-1 text-base font-semibold text-ink">{answers.diabetesManagement.join(', ') || t('notProvided')}</Text>
+              <Text className="mt-5 text-sm text-copy" style={[text.label, { color: colors.mutedForeground }]}>{t('management')}</Text>
+              <Text className="mt-1 text-base font-semibold text-ink" style={[text.body, { color: colors.foreground }]}>{answers.diabetesManagement.join(', ') || t('notProvided')}</Text>
             </View>
 
-            <Pressable accessibilityRole="button" className="app-button-primary mt-5" onPress={() => setEditing(true)}>
-              <Text className="text-base font-bold text-on-brand">{t('editHealthProfile')}</Text>
+            <Pressable accessibilityRole="button" className="app-button-primary mt-5" onPress={() => setEditing(true)} style={primaryButtonStyle}>
+              <Text className="text-base font-bold text-on-brand" style={[text.button, { color: colors.onPrimary }]}>{t('editHealthProfile')}</Text>
             </Pressable>
           </>
         ) : (
           <>
-            <View className="app-card">
-              <Text className="text-xl font-bold text-ink">{t('aboutYou')}</Text>
+            <View className="app-card" style={cardStyle}>
+              <Text className="text-xl font-bold text-ink" style={[text.cardTitle, { color: colors.foreground }]}>{t('aboutYou')}</Text>
               <View className="mt-5">
                 <QuestionnaireField keyboardType="number-pad" label={t('age')} onChangeText={(age) => updateAnswers({ age })} placeholder="42" suffix="years" value={answers.age} />
               </View>
@@ -108,8 +112,8 @@ export default function ProfileScreen() {
                 ))}
               </View>
               {answers.gender === 'Female' ? (
-                <View className="mt-4 w-full rounded-card bg-brand-soft p-4">
-                  <Text className="text-base font-semibold text-ink">{t('pregnancy')}</Text>
+                <View className="mt-4 w-full rounded-card bg-brand-soft p-4" style={{ backgroundColor: colors.primarySoft }}>
+                  <Text className="text-base font-semibold text-ink" style={[text.body, { color: colors.foreground }]}>{t('pregnancy')}</Text>
                   <View className="mt-3 flex-row flex-wrap gap-2">
                     {(['Yes', 'No', 'Not sure'] as const).map((status) => (
                       <SelectionChip key={status} label={status} onPress={() => updateAnswers({ isPregnant: status })} selected={answers.isPregnant === status} />
@@ -131,8 +135,8 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            <View className="app-card mt-4">
-              <Text className="text-xl font-bold text-ink">{t('diabetesHistory')}</Text>
+            <View className="app-card mt-4" style={cardStyle}>
+              <Text className="text-xl font-bold text-ink" style={[text.cardTitle, { color: colors.foreground }]}>{t('diabetesHistory')}</Text>
               <Text className="mt-5 text-base font-semibold text-ink">{t('diabetesType')}</Text>
               <View className="mt-3 flex-row flex-wrap gap-2">
                 {diabetesTypes.map((type) => (
@@ -152,8 +156,8 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            <Pressable accessibilityRole="button" className="app-button-primary mt-5" onPress={save}>
-              <Text className="text-base font-bold text-on-brand">{t('saveChanges')}</Text>
+            <Pressable accessibilityRole="button" className="app-button-primary mt-5" onPress={save} style={primaryButtonStyle}>
+              <Text className="text-base font-bold text-on-brand" style={[text.button, { color: colors.onPrimary }]}>{t('saveChanges')}</Text>
             </Pressable>
           </>
         )}

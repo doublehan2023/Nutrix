@@ -5,22 +5,25 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { tabs } from '../../../constants/data';
-import { colors, components } from '../../../constants/theme';
+import { components } from '../../../constants/theme';
 import { useLanguage } from '@/features/localization/language-context';
+import { usePatientTheme } from '@/features/accessibility/senior-mode-context';
 
 const tabBar = components.tabBar;
-const activeTabColor = tabBar.activeColor;
-const inactiveTabColor = tabBar.inactiveColor;
-
 function PatientTabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
   const { t } = useLanguage();
+  const { colors, isSeniorMode, text } = usePatientTheme();
+  const barHeight = isSeniorMode ? 92 : tabBar.height;
   return (
     <View
       style={[
         styles.tabBar,
         {
-          height: tabBar.height + insets.bottom,
+          height: barHeight + insets.bottom,
           paddingBottom: insets.bottom,
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          shadowColor: colors.foreground,
         },
       ]}>
       {state.routes.map((route, index) => {
@@ -55,13 +58,13 @@ function PatientTabBar({ state, descriptors, navigation, insets }: BottomTabBarP
             accessibilityState={isFocused ? { selected: true } : {}}
             onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
             onPress={onPress}
-            style={styles.tabButton}>
+            style={[styles.tabButton, isSeniorMode ? { minHeight: barHeight } : undefined]}>
             <Image
               source={tab.icon}
               resizeMode="contain"
-              style={[styles.tabIcon, { tintColor: isFocused ? activeTabColor : inactiveTabColor }]}
+              style={[styles.tabIcon, isSeniorMode ? { height: 32, tintColor: isFocused ? colors.primary : colors.mutedForeground, width: 32 } : { tintColor: isFocused ? colors.onPrimarySoft : colors.mutedForeground }]}
             />
-            <Text style={[styles.tabLabel, { color: isFocused ? activeTabColor : inactiveTabColor }]}>
+            <Text style={[styles.tabLabel, isSeniorMode ? text.caption : undefined, { color: isFocused ? colors.primary : colors.mutedForeground }]}>
               {translatedTitle}
             </Text>
           </Pressable>
@@ -74,6 +77,8 @@ function PatientTabBar({ state, descriptors, navigation, insets }: BottomTabBarP
 export default function PatientTabsLayout() {
   const reduceMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
+  const { isSeniorMode } = usePatientTheme();
+  const barHeight = isSeniorMode ? 92 : tabBar.height;
 
   return (
     <Tabs
@@ -82,7 +87,7 @@ export default function PatientTabsLayout() {
         headerShown: false,
         tabBarShowLabel: false,
         animation: reduceMotion ? 'none' : 'fade',
-        sceneStyle: { paddingBottom: tabBar.height + insets.bottom },
+        sceneStyle: { paddingBottom: barHeight + insets.bottom },
       }}>
       {tabs.map((tab) => (
         <Tabs.Screen
@@ -105,11 +110,8 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
-    borderTopColor: colors.border,
     borderTopWidth: StyleSheet.hairlineWidth,
     elevation: 8,
-    shadowColor: colors.foreground,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,

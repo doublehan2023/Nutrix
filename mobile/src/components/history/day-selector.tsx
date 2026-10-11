@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 
 import type { HistoryDayId } from '@/data/history';
-import { colors } from '../../../constants/theme';
+import { usePatientTheme } from '@/features/accessibility/senior-mode-context';
 
 type DaySelectorProps = {
   days: readonly HistoryDayId[];
@@ -10,6 +10,7 @@ type DaySelectorProps = {
 };
 
 export function DaySelector({ days, onSelect, selectedDay }: DaySelectorProps) {
+  const { colors, isSeniorMode, text } = usePatientTheme();
   return (
     <View className="flex-row justify-between gap-2">
       {days.map((day) => {
@@ -21,11 +22,11 @@ export function DaySelector({ days, onSelect, selectedDay }: DaySelectorProps) {
             accessibilityLabel={`Select ${day}`}
             accessibilityRole="button"
             accessibilityState={{ selected }}
-            className={`h-12 flex-1 items-center justify-center rounded-2xl ${
-              selected ? 'bg-brand' : 'bg-surface'
-            }`}
+            className="flex-1 items-center justify-center rounded-2xl"
             onPress={() => onSelect(day)}
             style={({ pressed }) => ({
+              backgroundColor: selected ? colors.primary : colors.card,
+              minHeight: isSeniorMode ? 56 : 48,
               opacity: pressed ? 0.78 : 1,
               shadowColor: colors.foreground,
               shadowOffset: { width: 0, height: 4 },
@@ -33,7 +34,7 @@ export function DaySelector({ days, onSelect, selectedDay }: DaySelectorProps) {
               shadowRadius: 8,
               elevation: 2,
             })}>
-            <Text className={`text-sm font-semibold ${selected ? 'text-on-brand' : 'text-ink'}`}>{day}</Text>
+            <Text className="font-semibold" style={[text.label, { color: selected ? colors.onPrimary : colors.foreground }]}>{day}</Text>
           </Pressable>
         );
       })}

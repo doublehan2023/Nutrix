@@ -7,9 +7,9 @@ import { AuthProvider, useAuth } from '@/auth/auth-provider';
 import { MealDraftProvider } from '@/features/meals/meal-draft-context';
 import { LanguageProvider } from '@/features/localization/language-context';
 import { HealthQuestionnaireProvider } from '@/features/profile/health-questionnaire-context';
+import { PatientThemeProvider, usePatientTheme } from '@/features/accessibility/senior-mode-context';
 import { ClerkProvider } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
-import { colors } from '../../constants/theme';
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
 
@@ -21,6 +21,7 @@ SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
   const { isReady, user } = useAuth();
+  const { colors } = usePatientTheme();
 
   return (
     <>
@@ -50,13 +51,15 @@ export default function RootLayout() {
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <AuthProvider>
-        <LanguageProvider>
-          <HealthQuestionnaireProvider>
-            <MealDraftProvider>
-              <RootNavigator />
-            </MealDraftProvider>
-          </HealthQuestionnaireProvider>
-        </LanguageProvider>
+        <PatientThemeProvider>
+          <LanguageProvider>
+            <HealthQuestionnaireProvider>
+              <MealDraftProvider>
+                <RootNavigator />
+              </MealDraftProvider>
+            </HealthQuestionnaireProvider>
+          </LanguageProvider>
+        </PatientThemeProvider>
       </AuthProvider>
     </ClerkProvider>
   );

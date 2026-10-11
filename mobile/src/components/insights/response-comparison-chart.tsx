@@ -1,8 +1,8 @@
 import { Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Line, Path, Text as SvgText } from 'react-native-svg';
 
-import { colors } from '../../../constants/theme';
 import { useLanguage } from '@/features/localization/language-context';
+import { usePatientTheme } from '@/features/accessibility/senior-mode-context';
 
 type ResponseComparisonChartProps = {
   minutes: readonly number[];
@@ -18,6 +18,7 @@ function buildPath(values: readonly number[], toX: (index: number) => number, to
 
 export function ResponseComparisonChart({ response, minutes, sampleSize }: ResponseComparisonChartProps) {
   const { t } = useLanguage();
+  const { cardStyle, colors, isSeniorMode, text } = usePatientTheme();
   const { width } = useWindowDimensions();
   const chartWidth = Math.max(220, width - 80);
   const plotWidth = chartWidth - chartPadding.left - chartPadding.right;
@@ -29,12 +30,12 @@ export function ResponseComparisonChart({ response, minutes, sampleSize }: Respo
   const sixtyMinuteValue = response[minutes.indexOf(60)];
 
   return (
-    <View className="app-card mt-4">
-      <Text className="app-card-title">{t('observedMealResponse')}</Text>
+    <View className="app-card mt-4" style={cardStyle}>
+      <Text className="app-card-title" style={[text.cardTitle, { color: colors.foreground }]}>{t('observedMealResponse')}</Text>
       <View className="mt-2 flex-row gap-5">
         <View className="flex-row items-center">
           <View className="mr-2 h-1 w-5 rounded-full" style={{ backgroundColor: colors.medication }} />
-          <Text className="text-sm text-copy">{t('meanGlucoseChange')}</Text>
+          <Text className="text-sm text-copy" style={[text.label, { color: colors.mutedForeground }]}>{t('meanGlucoseChange')}</Text>
         </View>
       </View>
       <View className="mt-2 items-center">
@@ -51,7 +52,7 @@ export function ResponseComparisonChart({ response, minutes, sampleSize }: Respo
             />
           ))}
           {yTicks.map((tick) => (
-            <SvgText fill={colors.mutedForeground} fontSize={11} key={`label-${tick}`} textAnchor="end" x={chartPadding.left - 5} y={toY(tick) + 4}>
+            <SvgText fill={colors.mutedForeground} fontSize={isSeniorMode ? 13 : 11} key={`label-${tick}`} textAnchor="end" x={chartPadding.left - 5} y={toY(tick) + 4}>
               +{Math.round(tick)}
             </SvgText>
           ))}
@@ -59,7 +60,7 @@ export function ResponseComparisonChart({ response, minutes, sampleSize }: Respo
           {minutes.map((minute, index) => (
             <SvgText
               fill={colors.mutedForeground}
-              fontSize={11}
+              fontSize={isSeniorMode ? 13 : 11}
               key={minute}
               textAnchor={index === 0 ? 'start' : index === minutes.length - 1 ? 'end' : 'middle'}
               x={toX(index)}
@@ -69,7 +70,7 @@ export function ResponseComparisonChart({ response, minutes, sampleSize }: Respo
           ))}
         </Svg>
       </View>
-      <Text className="text-sm text-copy">
+      <Text className="text-sm text-copy" style={[text.label, { color: colors.mutedForeground }]}>
         {t('meanRise', { value: sixtyMinuteValue, count: sampleSize })}
       </Text>
     </View>

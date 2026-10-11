@@ -47,6 +47,7 @@ const translations: Record<LanguageCode, Record<string, string>> = {
     signOut: 'Sign out',
     signOutBody: 'You will need your email and password to access Nutrix again.',
     signOutTitle: 'Sign out?',
+    seniorMode: 'Senior mode', seniorModeDescription: 'Use higher-contrast colors, larger text, and larger controls.',
   },
   es: {
     accountFallback: 'Tu cuenta',
@@ -67,6 +68,7 @@ const translations: Record<LanguageCode, Record<string, string>> = {
     signOut: 'Cerrar sesión',
     signOutBody: 'Necesitarás tu correo electrónico y contraseña para volver a acceder a Nutrix.',
     signOutTitle: '¿Cerrar sesión?',
+    seniorMode: 'Modo para personas mayores', seniorModeDescription: 'Usa colores de mayor contraste, texto más grande y controles más grandes.',
   },
   'zh-Hans': {
     accountFallback: '您的账户',
@@ -87,6 +89,7 @@ const translations: Record<LanguageCode, Record<string, string>> = {
     signOut: '退出登录',
     signOutBody: '您需要使用电子邮箱和密码再次登录 Nutrix。',
     signOutTitle: '退出登录？',
+    seniorMode: '长者模式', seniorModeDescription: '使用高对比度颜色、更大的文字和更大的控件。',
   },
 };
 

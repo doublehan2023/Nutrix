@@ -2,8 +2,8 @@ import { Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Line, Path, Polygon, Text as SvgText } from 'react-native-svg';
 
 import type { HistoryDay, HistorySeriesPoint } from '@/data/history';
-import { colors } from '../../../constants/theme';
 import { useLanguage } from '@/features/localization/language-context';
+import { usePatientTheme } from '@/features/accessibility/senior-mode-context';
 
 type HistoryTimelineChartProps = {
   day: HistoryDay;
@@ -17,20 +17,21 @@ function makePath(points: readonly HistorySeriesPoint[], toX: (hour: number) => 
   return points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${toX(point.hour)} ${toY(point.value)}`).join(' ');
 }
 
-function LegendItem({ color, label, diamond = false }: { color: string; diamond?: boolean; label: string }) {
+function LegendItem({ color, diamond = false, label, textStyle, textColor }: { color: string; diamond?: boolean; label: string; textColor: string; textStyle: { fontSize?: number; lineHeight?: number } }) {
   return (
     <View className="flex-row items-center">
       <View
         className={diamond ? 'mr-1.5 h-2.5 w-2.5 rotate-45' : 'mr-1.5 h-3 w-3 rounded-full'}
         style={{ backgroundColor: color }}
       />
-      <Text className="text-xs text-copy">{label}</Text>
+      <Text className="text-copy" style={[textStyle, { color: textColor }]}>{label}</Text>
     </View>
   );
 }
 
 export function HistoryTimelineChart({ day }: HistoryTimelineChartProps) {
   const { t } = useLanguage();
+  const { cardStyle, colors, isSeniorMode, text } = usePatientTheme();
   const { width } = useWindowDimensions();
   const chartWidth = Math.max(220, width - 80);
   const plotWidth = chartWidth - chartPadding.left - chartPadding.right;
@@ -43,8 +44,8 @@ export function HistoryTimelineChart({ day }: HistoryTimelineChartProps) {
   const toY = (value: number) => chartPadding.top + ((maximum - value) / Math.max(1, maximum - minimum)) * plotHeight;
 
   return (
-    <View className="app-card mt-4">
-      <Text className="app-card-title">
+    <View className="app-card mt-4" style={cardStyle}>
+      <Text className="app-card-title" style={[text.cardTitle, { color: colors.foreground }]}>
         {t('glucoseHeartRate', { day: day.id })}
       </Text>
       <View className="mt-2 items-center">
@@ -63,7 +64,7 @@ export function HistoryTimelineChart({ day }: HistoryTimelineChartProps) {
           {yTicks.map((tick) => (
             <SvgText
               fill={colors.mutedForeground}
-              fontSize={11}
+              fontSize={isSeniorMode ? 13 : 11}
               key={`label-${tick}`}
               textAnchor="end"
               x={chartPadding.left - 5}
@@ -92,7 +93,7 @@ export function HistoryTimelineChart({ day }: HistoryTimelineChartProps) {
           {xTicks.map((tick) => (
             <SvgText
               fill={colors.mutedForeground}
-              fontSize={11}
+              fontSize={isSeniorMode ? 13 : 11}
               key={`time-${tick}`}
               textAnchor={tick === 0 ? 'start' : tick === 24 ? 'end' : 'middle'}
               x={toX(tick)}
@@ -102,10 +103,10 @@ export function HistoryTimelineChart({ day }: HistoryTimelineChartProps) {
           ))}
         </Svg>
       </View>
-      <Text className="mt-2 text-xs text-copy">{t('hoursSince')}</Text>
+      <Text className="mt-2 text-xs text-copy" style={[text.caption, { color: colors.mutedForeground }]}>{t('hoursSince')}</Text>
       <View className="mt-2 flex-row flex-wrap gap-x-4 gap-y-2">
-        <LegendItem color={colors.success} label={t('glucose')} />
-        <LegendItem color={colors.heartRate} label={t('heartRate')} />
+        <LegendItem color={colors.success} label={t('glucose')} textColor={colors.mutedForeground} textStyle={text.caption} />
+        <LegendItem color={colors.heartRate} label={t('heartRate')} textColor={colors.mutedForeground} textStyle={text.caption} />
       </View>
     </View>
   );
