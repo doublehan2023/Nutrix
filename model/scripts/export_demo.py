@@ -1,6 +1,7 @@
 """Bundle the trained components and export the demo dataset by running the single-meal Predictor (the future API path)
 on selected day-8+ meals. Also checks that the API path reproduces the batch evaluation.
-usage: python -I export_demo.py <CGMacros dir> <stage1 dir> <blend dir> <out dir>
+usage: python -I export_demo.py <CGMacros dir> <stage1 dir> <blend dir> <out dir> [extra meals csv]
+The optional csv (column meal_id, e.g. results/showcase/showcase_10_meals.csv) adds those meals to the default pick.
 """
 import sys, os, json, time, pickle, io, base64
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -13,6 +14,7 @@ from pmrf.predict import Predictor, build_response, group_contributions, confide
 from pmrf.guide import exceed_prob, person_guide, person_guide_measured
 
 DATA, S1, BL, OUT = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+EXTRA = pd.read_csv(sys.argv[5]).meal_id.tolist() if len(sys.argv) > 5 else []
 os.makedirs(OUT, exist_ok=True)
 torch.set_num_threads(8)
 st = pickle.load(open(os.path.join(S1, "stage1.pkl"), "rb"))
@@ -66,6 +68,7 @@ for pid, g in TE.groupby("pid"):
         if len(chosen) >= 4: break
         if i not in chosen: chosen.append(i)
     pick += chosen[:4]
+pick += [i for i in (int(m.split("_")[1]) for m in EXTRA) if i not in pick]   # meal id m<pid>_<row>
 pos = {i: k for k, i in enumerate(fp["te_index"])}
 images, meals_out, diffs, lats = {}, {}, [], []
 for n, i in enumerate(pick):
