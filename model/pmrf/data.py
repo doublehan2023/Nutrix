@@ -24,6 +24,9 @@ class Person:
     meds: pd.DataFrame      # time, med_class, dose (empty when the person takes no glucose-lowering drug)
     t0: pd.Timestamp        # record start; day 1 = [t0, t0 + 24 h)
     meta: dict = field(default_factory=dict)   # analysis-only labels, never model inputs
+    act: pd.Series = None   # activity in METs on the 1-min grid (CGMacros: Fitbit METs/10, or the 0-3 level mapped to METs)
+    act_kcal: pd.Series = None   # active kcal per minute
+    info: dict = field(default_factory=dict)   # person-level model inputs: age, sex_female, bmi (missing = NaN)
 
     def day(self, t):
         """1-based study day of timestamp(s) t"""
@@ -40,6 +43,8 @@ def load_cgmacros(root):
     bio = pd.read_csv(os.path.join(root, "bio.csv"))
     bio.columns = [c.strip() for c in bio.columns]
     a1c = {f"{int(r.subject):03d}": r["A1c PDL (Lab)"] for _, r in bio.iterrows()}
+    demo = {f"{int(r.subject):03d}": dict(age=float(r["Age"]), sex_female=float(str(r["Gender"]).strip().upper().startswith("F")),
+                                          bmi=float(r["BMI"])) for _, r in bio.iterrows()}
     persons = {}
     for f in sorted(glob.glob(os.path.join(root, "CGMacros-*", "CGMacros-*.csv"))):
         pid = os.path.basename(f)[9:12]
@@ -57,11 +62,21 @@ def load_cgmacros(root):
         photos = [os.path.join(root, f"CGMacros-{pid}", p) if isinstance(p, str) and os.path.exists(os.path.join(root, f"CGMacros-{pid}", p)) else None
                   for p in m["Image path"]]
         meals = pd.DataFrame(dict(time=m.Timestamp.to_numpy(), meal_type=m["Meal Type"].map(_norm_meal).to_numpy(),
-                                  carbs=carbs, protein=prot, fat=fat, fiber=fiber, kcal=4 * carbs + 4 * prot + 9 * fat, photo=photos))
+                                  carbs=carbs, protein=prot, fat=fat, fiber=fiber, kcal=4 * carbs + 4 * prot + 9 * fat, photo=photos,
+                                  calories_logged=pd.to_numeric(m["Calories"], errors="coerce").to_numpy(float)))
         a = a1c.get(pid, np.nan)
         group = "Healthy" if a < 5.65 else ("Prediabetes" if a <= 6.45 else "T2D")
+        if "METs" in d:
+            act = d.set_index("Timestamp")["METs"].reindex(grid) / 10.0           # stored x10
+        elif "Intensity" in d:                                                    # Fitbit level: sedentary/light/fairly/very active
+            act = d.set_index("Timestamp")["Intensity"].reindex(grid).map({0: 1.2, 1: 2.5, 2: 4.5, 3: 7.0})
+        else:
+            act = pd.Series(np.nan, index=grid)
+        akcal = d.set_index("Timestamp")["Calories (Activity)"].reindex(grid) if "Calories (Activity)" in d else pd.Series(np.nan, index=grid)
+        b = demo.get(pid, {})
         persons[pid] = Person(pid=pid, cgm=cgm, hr=hr, meals=meals.reset_index(drop=True),
-                              meds=pd.DataFrame(columns=MED_COLUMNS), t0=d.Timestamp.iloc[0], meta=dict(a1c=a, group=group))
+                              meds=pd.DataFrame(columns=MED_COLUMNS), t0=d.Timestamp.iloc[0], meta=dict(a1c=a, group=group),
+                              act=act, act_kcal=akcal, info=b)
     return persons
 
 
@@ -85,6 +100,7 @@ def load_bigideas(root, prefix="B"):
     demo = pd.read_csv(os.path.join(root, "Demographics.csv"))
     demo.columns = [c.strip().lstrip("﻿") for c in demo.columns]
     a1c = {f"{int(r.ID):03d}": float(r.HbA1c) for _, r in demo.iterrows()}
+    sex = {f"{int(r.ID):03d}": float(str(r.Gender).strip().upper().startswith("F")) for _, r in demo.iterrows()}
     persons = {}
     for d in sorted(glob.glob(os.path.join(root, "[0-9][0-9][0-9]"))):
         sid = os.path.basename(d)
@@ -120,7 +136,8 @@ def load_bigideas(root, prefix="B"):
         a = a1c.get(sid, np.nan)
         persons[prefix + sid] = Person(pid=prefix + sid, cgm=cgm, hr=hr, meals=meals.reset_index(drop=True),
                                        meds=pd.DataFrame(columns=MED_COLUMNS), t0=grid[0],
-                                       meta=dict(a1c=a, group="Healthy" if a < 5.65 else "Prediabetes", source="bigideas"))
+                                       meta=dict(a1c=a, group="Healthy" if a < 5.65 else "Prediabetes", source="bigideas"),
+                                       info=dict(age=np.nan, sex_female=sex.get(sid, np.nan), bmi=np.nan))
     return persons
 
 

@@ -22,7 +22,7 @@ flowchart LR
         subgraph vpc["Default VPC · 2 AZs"]
             link["VPC link"]
             alb["Internal ALB<br/>:80 → health /healthz"]
-            task["ECS Fargate task<br/>FastAPI · 2 vCPU / 4 GB<br/>model v4-20261010 baked in<br/>+ server/ store layer"]
+            task["ECS Fargate task<br/>FastAPI · 2 vCPU / 4 GB<br/>model v7-20261010 baked in<br/>+ server/ store layer"]
         end
 
         ddb[("DynamoDB nutrix-people<br/>meta + daily CGM / HR /<br/>meal / med chunks")]

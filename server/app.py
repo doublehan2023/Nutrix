@@ -1,7 +1,7 @@
 """Entry point for the AWS deployment: the model team's service (model/service/app.py) with person data on
 DynamoDB + S3 instead of files under /data. Nothing in model/ is changed; the store is swapped at start-up.
 
-/predict also returns `observed` (the real CGM curve and outcomes after the meal) when the store already holds CGM
+/predict fills a missing logged_kcal with the calories estimated from the photo (see fill_logged_kcal), and also returns `observed` (the real CGM curve and outcomes after the meal) when the store already holds CGM
 for the two hours after it, e.g. for onboarded study participants; see server/observed.py.
 
 GET /v1/people/{pid}/history/days and /history/days/{YYYY-MM-DD} serve the stored data per calendar day for the
@@ -33,11 +33,26 @@ from server.store import DynamoPersonStore
 _base_lifespan = base.app.router.lifespan_context
 
 
+def fill_logged_kcal(predictor):
+    """The v7 model was trained with the logged meal calories always present; LightGBM reads a missing value as 0 kcal and
+    under-predicts the peak. When /predict has no logged_kcal, use the calories estimated from the photo instead (on the
+    24 day-8 test meals: peak-rise MAE 18.7 mg/dL, vs 18.6 with the logged calories and 19.4 with none)."""
+    rows = predictor._predict_rows
+
+    def _predict_rows(X, *a, **kw):
+        if "meal_kcal_logged" in X and X.meal_kcal_logged.isna().any():
+            X = X.assign(meal_kcal_logged=X.meal_kcal_logged.fillna(X.est_kcal))
+        return rows(X, *a, **kw)
+
+    predictor._predict_rows = _predict_rows
+
+
 @asynccontextmanager
 async def lifespan(app):
     async with _base_lifespan(app):
         store = DynamoPersonStore(os.environ["PMRF_TABLE"], os.environ["PMRF_STATE_BUCKET"], region=os.environ.get("AWS_REGION"))
         base.S["people"] = store
+        fill_logged_kcal(base.S["pred"])
         base.LOG.info(json.dumps(dict(event="person_store", store=store.describe())))
         yield
 

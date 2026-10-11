@@ -167,7 +167,7 @@ def export_store(bundle, out_dir, version, encoder_weights, text_emb, risk_model
                     encoder=dict(model=bundle["encoder"][0], pretrained_tag=bundle["encoder"][1], weights="encoder/open_clip_model.safetensors",
                                  preprocess=open_clip.get_pretrained_cfg(*bundle["encoder"]), food_prompts=FOOD_PROMPTS),
                     gbm=gbm_cfg, macro=dict(k_pop=me.k_pop, k_pers=me.k_pers, n_macros=len(me.ridge)),
-                    transformer=dict(img_dim=int(bundle["img_dim"]), seeds=len(bundle["transformer_states"])),
+                    transformer=dict(img_dim=int(bundle["img_dim"]), seeds=len(bundle["transformer_states"]), num_cols=bundle.get("num_cols", "v1")),
                     blend=dict(weights=bundle["blend_weights"], curve_weight=bundle["curve_weight"], band_scale=bundle["band_scale"],
                                tf_sources=bundle.get("tf_sources", {})),
                     pop_avg_rise=float(bundle["pop_avg_rise"]))
@@ -229,7 +229,7 @@ def load_store(path, verify=True):
                 encoder_preprocess=man["encoder"]["preprocess"], text_emb=np.load(os.path.join(path, "encoder", "food_tag_text_emb.npy")),
                 macro_est=me, pca=PCAProj(pz["mean"], pz["components"]), gbm=g, transformer_states=tf, img_dim=man["transformer"]["img_dim"],
                 blend_weights=man["blend"]["weights"], curve_weight=man["blend"]["curve_weight"], band_scale=man["blend"]["band_scale"],
-                tf_sources=man["blend"]["tf_sources"], lib_emb=rv["emb"], lib_y=rv["y"], lib_pid=rv["pid"].astype(object),
+                tf_sources=man["blend"]["tf_sources"], num_cols=man["transformer"].get("num_cols", "v1"), lib_emb=rv["emb"], lib_y=rv["y"], lib_pid=rv["pid"].astype(object),
                 pop_avg_rise=man["pop_avg_rise"], person_state={},
                 risk_models=load_risk_json(risk) if os.path.exists(risk) else None,
                 guide_effects=load_effects_json(eff) if os.path.exists(eff) else None)

@@ -46,7 +46,7 @@ model team's service (`model/service/app.py`).
 
 ### GET /healthz
 
-`{"status": "ok", "model_version": "v4-20261010", "api_version": "0.1"}`
+`{"status": "ok", "model_version": "v7-20261010", "api_version": "0.1"}`
 
 ### GET /v1/version
 
@@ -77,11 +77,12 @@ straight to S3, not through the API.
 | --- | --- |
 | `cgm[]` (required) | `{timestamp, glucose_mgdl}`, 20–600 |
 | `hr[]` | `{timestamp, hr_bpm}`, 20–250 |
-| `meals[]` (required) | `{timestamp, meal_type, photo_key, carbs_g, protein_g, fat_g, fiber_g}`; `meal_type` is `breakfast`, `lunch`, `dinner` or `snack`. A meal counts as an example for the model when it has a photo, logged nutrition and 2 h of CGM without another meal |
+| `meals[]` (required) | `{timestamp, meal_type, photo_key, carbs_g, protein_g, fat_g, fiber_g, kcal}`; `meal_type` is `breakfast`, `lunch`, `dinner` or `snack`; `kcal` is the calories the user logged. A meal counts as an example for the model when it has a photo, logged nutrition and 2 h of CGM without another meal |
 | `meds[]` | `{timestamp, med_class, dose}` |
+| `activity[]` | `{timestamp, mets, level, active_kcal}`, one per minute or per interval. `mets` 0.5–25 (1 = rest, about 3 = walking), or `level` 0–3 (sedentary, light, moderate, vigorous) when only a level is known; `active_kcal` is kcal per minute. Only activity before a meal is used |
 | `start_time` | Start of day 1; default the first CGM reading |
 | `hist_days` | Days of history, 3–14, default 7 |
-| `person` | `{age, bmi, sex: "female" \| "male", has_diabetes}`, used by the metabolic profile |
+| `person` | `{age, bmi, sex: "female" \| "male", has_diabetes}`. Age, sex and BMI are model inputs (from v7) and feed the metabolic profile. Send them: a missing `sex` is read as male |
 
 Response `{person_id, model_version, build_ms, history_meals, usable_meals, meals_with_photo, meal_types, cgm_days,
 warnings[], profile}`. Show `warnings` (fewer than 10 usable meals or 5 days of CGM lowers accuracy). 404 lists photo
@@ -90,7 +91,7 @@ keys that do not exist.
 ### POST signals
 
 `POST /v1/people/{pid}/signals` with any of `cgm[]`, `hr[]`, `meals[]` (eaten without a prediction; nutrition
-optional), `meds[]`, same item shapes as `/history`. Appends; CGM, heart rate or a meal at an already stored timestamp
+optional), `meds[]`, `activity[]`, same item shapes as `/history`. Appends; CGM, heart rate or a meal at an already stored timestamp
 replaces the old row.
 Response `{person_id, stored: {kind: total rows}}`.
 
@@ -103,7 +104,8 @@ Response `{person_id, stored: {kind: total rows}}`.
 | `photo_key` (required) | From a photo upload |
 | `meal_time` | Default: the photo's EXIF time (422 if it has none) |
 | `meal_type` | Default: from the time of day |
-| `recent_cgm[]`, `recent_hr[]` | Readings to store before predicting |
+| `logged_kcal` | Send it whenever the user enters calories for this meal, 0–5000. The v7 model was trained with it always present; when it is missing, the deployed service uses the calories estimated from the photo instead (`meal.estimated_nutrition.kcal`; about as accurate on the day-8 test meals) |
+| `recent_cgm[]`, `recent_hr[]`, `recent_activity[]` | Readings to store before predicting |
 | `log_meal` | Default `true`: adds the meal with its estimated nutrition to the log, so later predictions see it as the previous meal. Use `false` for "what would this do" checks |
 
 The response is the contract in `model/docs/api_contract.md`: `meal` (photo tags, estimated nutrition, similar past
@@ -111,7 +113,7 @@ meals), `pre_meal_state`, `prediction` (curve with 80% band, glucose at 30/60/90
 probability of exceeding 140/180), `explanation`, `personalization`, `confidence`, `what_if[]`, `latency_ms`, plus
 `model_version`.
 
-Deployed difference: `observed` (listed as demo-only in the contract) is returned when CGM for the two hours after
+Deployed differences: a missing `logged_kcal` is filled from the photo (above), and `observed` (listed as demo-only in the contract) is returned when CGM for the two hours after
 `meal_time` is already stored, e.g. for onboarded study participants: the real `curve`, `glucose_at_min`,
 `pre_meal_glucose_mgdl`, `peak_glucose_mgdl`, `peak_rise_mgdl`, `time_to_peak_min`, `iauc_0_120_mgdl_min`,
 `cgm_coverage` and `share_of_curve_inside_band80`. Absent for a live meal.

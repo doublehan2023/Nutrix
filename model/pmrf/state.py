@@ -24,9 +24,18 @@ from .features import meal_table, cgm_profile, meal_profile, PROFILE_FEATURES
 from .vision import MACROS, _knn
 
 SIGNAL_COLUMNS = dict(cgm=["timestamp", "glucose_mgdl"], hr=["timestamp", "hr_bpm"],
-                      meals=["time", "meal_type", "carbs", "protein", "fat", "fiber", "kcal", "photo_key", "source"],
-                      meds=["time", "med_class", "dose"])
-SIGNAL_KEYS = dict(cgm="timestamp", hr="timestamp", meals="time", meds="time")
+                      meals=["time", "meal_type", "carbs", "protein", "fat", "fiber", "kcal", "calories_logged", "photo_key", "source"],
+                      meds=["time", "med_class", "dose"], activity=["timestamp", "mets", "active_kcal"])
+SIGNAL_KEYS = dict(cgm="timestamp", hr="timestamp", meals="time", meds="time", activity="timestamp")
+
+
+def person_info(meta):
+    """person-level model inputs from the stored profile (age, sex, BMI); missing = NaN"""
+    p = (meta or {}).get("person") or {}
+    sex = p.get("sex")
+    return dict(age=float(p["age"]) if p.get("age") is not None else np.nan,
+                sex_female=1.0 if sex == "female" else (0.0 if sex == "male" else np.nan),
+                bmi=float(p["bmi"]) if p.get("bmi") is not None else np.nan)
 CGM_INTERP_LIMIT_MIN = 6          # fill at most 6 missing minutes between two sensor readings (5-min sensors)
 PID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 ARRAY_COLS = ["emb", "curve", "pre"]
@@ -54,7 +63,7 @@ def _naive(ts):
     return t
 
 
-def assemble_person(pid, t0, cgm, hr, meals, meds, fill_gap_min=CGM_INTERP_LIMIT_MIN):
+def assemble_person(pid, t0, cgm, hr, meals, meds, fill_gap_min=CGM_INTERP_LIMIT_MIN, activity=None, info=None):
     """raw signals -> Person on a 1-min grid (CGM linear between readings across gaps of up to fill_gap_min missing minutes;
     0 = the readings are already on a 1-min grid, as in CGMacros; HR per minute)"""
     c = pd.Series(cgm.glucose_mgdl.to_numpy(float), index=_naive(cgm.timestamp).dt.floor("min")).groupby(level=0).mean().sort_index()
@@ -72,11 +81,18 @@ def assemble_person(pid, t0, cgm, hr, meals, meds, fill_gap_min=CGM_INTERP_LIMIT
     m["time"] = _naive(m.time)
     m = pd.DataFrame(dict(time=m.time.to_numpy(), meal_type=m.meal_type.to_numpy(), carbs=m.carbs.to_numpy(float),
                           protein=m.protein.to_numpy(float), fat=m.fat.to_numpy(float), fiber=m.fiber.to_numpy(float),
-                          kcal=m.kcal.to_numpy(float), photo=m.photo_key.to_numpy()))
+                          kcal=m.kcal.to_numpy(float), photo=m.photo_key.to_numpy(),
+                          calories_logged=(m.calories_logged.to_numpy(float) if "calories_logged" in m else np.full(len(m), np.nan))))
     md = meds.rename(columns={})[MED_COLUMNS].copy() if len(meds) else pd.DataFrame(columns=MED_COLUMNS)
     if len(md):
         md["time"] = _naive(md.time)
-    return Person(pid=pid, cgm=cg, hr=hg, meals=m.sort_values("time").reset_index(drop=True), meds=md, t0=t0)
+    act = akc = None
+    if activity is not None and len(activity):              # METs and active kcal per minute (no filling across gaps)
+        a = activity.copy(); a.index = _naive(a.timestamp).dt.floor("min")
+        act = pd.to_numeric(a.mets, errors="coerce").groupby(level=0).mean().reindex(grid)
+        akc = pd.to_numeric(a.active_kcal, errors="coerce").groupby(level=0).mean().reindex(grid)
+    return Person(pid=pid, cgm=cg, hr=hg, meals=m.sort_values("time").reset_index(drop=True), meds=md, t0=t0,
+                  act=act, act_kcal=akc, info=info or {})
 
 
 class PersonStore:
@@ -134,7 +150,7 @@ class PersonStore:
         if not len(s["cgm"]):
             raise ValueError("no CGM readings stored for this person")
         return assemble_person(pid, meta.get("t0"), s["cgm"], s["hr"], s["meals"], s["meds"],
-                               fill_gap_min=meta.get("cgm_fill_gap_min", CGM_INTERP_LIMIT_MIN))
+                               fill_gap_min=meta.get("cgm_fill_gap_min", CGM_INTERP_LIMIT_MIN), activity=s["activity"], info=person_info(meta))
 
     # ---------------------------------------------------------------- state
     def save_state(self, pid, state):
@@ -191,7 +207,7 @@ def build_state(person, predictor, load_photo, hist_days=7):
     M, CURV, PRE, _ = meal_table({person.pid: person}, hist_days)
     if not len(M):
         raise ValueError("no meals in the history")
-    hist = (M.day <= hist_days).to_numpy()
+    hist = ((M.day >= 1) & (M.day <= hist_days)).to_numpy()   # the window starts at t0 (day 1); earlier data is context only
     has = np.array([isinstance(k, str) and len(k) > 0 for k in M.photo]) & hist
     E = np.zeros((len(M), b["img_dim"]), np.float32)
     idx = np.flatnonzero(has)

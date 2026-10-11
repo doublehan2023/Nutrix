@@ -11,7 +11,8 @@ from PIL import Image
 from .features import meal_table, person_profile, CURVE_T, TARGETS
 from .pipeline import N_PCA, FEATURE_GROUPS, enforce_consistency
 from .vision import PhotoEncoder, FoodTagger, FOOD_PROMPTS, _knn, MACROS
-from .models.icl_transformer import ICLTransformer, EpisodeData, numeric_block, predict as tf_predict, predict_scalars, curve_to_targets, NUM_COLS
+from .models.icl_transformer import ICLTransformer, EpisodeData, numeric_block, predict as tf_predict, predict_scalars, curve_to_targets, NUM_COLS, NUM_COLS_BY_VERSION
+import dataclasses
 from .guide import exceed_prob
 
 API_VERSION = "0.1"
@@ -92,10 +93,11 @@ class Predictor:
         self.enc = encoder or PhotoEncoder(*bundle["encoder"], threads=threads, preprocess=bundle.get("encoder_preprocess"))
         self.tagger = FoodTagger(bundle["text_emb"] if "text_emb" in bundle else self.enc.encode_texts(FOOD_PROMPTS))
         self.tf = []
+        self.cols = NUM_COLS_BY_VERSION[bundle.get("num_cols", "v1")]      # transformer input columns (v1 = v4 model, v2 = v7)
         for sd in bundle["transformer_states"]:
-            m = ICLTransformer(img_dim=bundle["img_dim"]); m.load_state_dict(sd, strict=False); m.eval(); self.tf.append(m)
+            m = ICLTransformer(img_dim=bundle["img_dim"], n_num=len(self.cols)); m.load_state_dict(sd, strict=False); m.eval(); self.tf.append(m)
 
-    def predict_meal(self, person, photo, meal_time, meal_type, state=None):
+    def predict_meal(self, person, photo, meal_time, meal_type, state=None, logged_kcal=None):
         """person: pmrf.data.Person with CGM/HR up to the meal; photo: PIL image or path. The person's history state
         (features, curves and photo embeddings of days 1-7, profile; built once by pmrf.state.build_state) is passed in,
         or taken from the bundle for the development cohort."""
@@ -116,8 +118,9 @@ class Predictor:
         mt_ = pd.Timestamp(meal_time)
         recent = p.meals[(pd.to_datetime(p.meals.time) < mt_) & (pd.to_datetime(p.meals.time) >= mt_ - pd.Timedelta("12h"))]
         meals = pd.concat([recent, pd.DataFrame([dict(time=mt_, meal_type=meal_type, carbs=np.nan, protein=np.nan, fat=np.nan,
-                                                      fiber=np.nan, kcal=np.nan, photo=None)])], ignore_index=True)
-        tmp = type(p)(p.pid, p.cgm, p.hr, meals, p.meds, p.t0, p.meta)
+                                                      fiber=np.nan, kcal=np.nan, photo=None,
+                                                      calories_logged=np.nan if logged_kcal is None else float(logged_kcal))])], ignore_index=True)
+        tmp = dataclasses.replace(p, meals=meals)          # keeps activity and person info
         M, _, PRE, _ = meal_table({p.pid: tmp})
         k = M.index[M.time == mt_][-1]
         row, pre = M.loc[k].copy(), PRE[k]
@@ -164,7 +167,7 @@ class Predictor:
         hdf["e_carbs_sd"] = hdf.est_carbs_sd
         for mt in ["breakfast", "lunch", "dinner", "snack"]:
             hdf[f"mt_{mt}"] = hdf[f"is_{mt}"]
-        num = np.concatenate([numeric_block(qdf), numeric_block(hdf)])
+        num = np.concatenate([numeric_block(qdf, self.cols), numeric_block(hdf, self.cols)])
         preseq = np.concatenate([pre, np.stack(H.pre.to_numpy())])
         resp = np.concatenate([np.full((len(qdf), len(CURVE_T)), np.nan), np.stack(H.curve.to_numpy())])
         img = np.concatenate([emb, np.stack(H.emb.to_numpy())])
@@ -211,12 +214,12 @@ class Predictor:
         return [dict(scenario=name, peak_rise_mgdl=_r(o["dpeak"][i]), peak_glucose_mgdl=_r(o["Gmax"][i]), iauc_0_120_mgdl_min=_r(o["iauc"][i], 0),
                      curve_mgdl=[_r(g0 + v) for v in o["curve"][i]]) for i, (name, _) in enumerate(WHAT_IF)]
 
-    def respond(self, person, photo, meal_time, meal_type, state=None, photo_ref=None):
+    def respond(self, person, photo, meal_time, meal_type, state=None, photo_ref=None, logged_kcal=None):
         """Full API response for one meal (prediction, explanation, similar past meals, confidence, what-ifs, P(peak > x)).
         photo_ref(history_row) -> the identifier returned for a similar past meal (default: its photo_key column)."""
         state = state if state is not None else self.b["person_state"][person.pid]
         H = state["hist"]
-        out, X, pre, e, tags, lat, sidx = self.predict_meal(person, photo, meal_time, meal_type, state)
+        out, X, pre, e, tags, lat, sidx = self.predict_meal(person, photo, meal_time, meal_type, state, logged_kcal=logged_kcal)
         t = time.perf_counter()
         wi = self.what_if(X, pre[None], H, e[None])
         lat["what_if"] = (time.perf_counter() - t) * 1000

@@ -4,7 +4,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="${1:-${MODEL_VERSION:-v4-20261010}}"
+VERSION="${1:-${MODEL_VERSION:-v7-20261010}}"
 SHA="$(git -C "$ROOT" rev-parse --short HEAD)"
 
 [ -f "$ROOT/model/deploy/model_store/$VERSION/manifest.json" ] || { echo "model $VERSION missing: run ./scripts/fetch_model.sh $VERSION" >&2; exit 1; }
