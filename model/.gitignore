@@ -6,7 +6,10 @@ cgmacros/
 data_ext/
 Type1Diabetes.parquet
 eda/
-figures/
+figures/*
+!figures/framework/
+figures/framework/fonts/
+figures/framework/assets/
 results/
 deploy/model_store/
 site/index.html

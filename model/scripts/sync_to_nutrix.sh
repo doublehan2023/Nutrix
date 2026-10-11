@@ -7,7 +7,10 @@ mkdir -p "$DST"
 rsync -a --delete --prune-empty-dirs \
   --exclude '__pycache__/' --exclude '*.pyc' \
   --include 'pmrf/***' --include 'service/***' --include 'scripts/***' --include 'tests/***' \
-  --include 'docs/' --include 'docs/api_contract.md' \
+  --include 'docs/' --include 'docs/api_contract.md' --include 'docs/model_facts_for_slides.md' \
+  --include 'figures/' --include 'figures/framework/' --include 'figures/framework/draw_framework.py' \
+  --include 'figures/framework/render.sh' --include 'figures/framework/assets.json' --include 'figures/framework/README.md' \
+  --include 'figures/framework/out/' --include 'figures/framework/out/training_framework.*' \
   --include 'deploy/' --include 'deploy/Dockerfile' --include 'deploy/requirements.txt' \
   --include 'site/' --include 'site/template.html' \
   --include 'README.md' --include 'DEPLOY.md' --include '.dockerignore' --include 'requirements-dev.txt' \
