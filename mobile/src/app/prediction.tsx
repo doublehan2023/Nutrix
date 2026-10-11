@@ -47,7 +47,12 @@ export default function PredictionScreen() {
     <SafeAreaView className="app-screen" edges={['top']}>
       <ScrollView contentContainerClassName="px-5 pb-12">
         <PredictionHeader onBack={() => router.back()} title="Meal prediction" />
-        <PredictionChart data={chartData} day={8} />
+        <PredictionChart
+          data={chartData}
+          day={8}
+          peakGlucose={prediction.prediction.peak_glucose_mgdl}
+          timeToPeak={prediction.prediction.time_to_peak_min}
+        />
 
         <View className="mt-4 flex-row gap-3">
           <MetricCard label="Peak" unit="mg/dL" value={String(Math.round(prediction.prediction.peak_glucose_mgdl))} />

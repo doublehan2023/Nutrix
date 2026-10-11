@@ -1,3 +1,6 @@
+import { fetch as expoFetch } from 'expo/fetch';
+import { File } from 'expo-file-system';
+
 const gatewayUrl = process.env.EXPO_PUBLIC_NUTRIX_API_URL?.replace(/\/$/, '');
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -90,7 +93,12 @@ export function createGatewayClient({ getToken }: GatewayClientOptions) {
     createPhotoUpload: () => request<PhotoUpload>('/v1/mobile/photos/upload-url', { method: 'POST' }),
     requestPrediction: (input: { logMeal: boolean; mealTime: string; mealType: MealType; photoKey: string }) =>
       request<Prediction>('/v1/mobile/predictions', {
-        body: JSON.stringify(input),
+        body: JSON.stringify({
+          log_meal: input.logMeal,
+          meal_time: input.mealTime,
+          meal_type: input.mealType,
+          photo_key: input.photoKey,
+        }),
         headers: { 'Content-Type': 'application/json' },
         method: 'POST',
       }),
@@ -98,19 +106,23 @@ export function createGatewayClient({ getToken }: GatewayClientOptions) {
 }
 
 export async function uploadMealPhoto(photoUri: string, upload: PhotoUpload) {
-  let body: Blob;
   try {
-    const photo = await fetch(photoUri);
-    if (!photo.ok) throw new Error('photo read failed');
-    body = await photo.blob();
-  } catch {
-    throw new GatewayError('Unable to prepare the selected photo for upload. Try choosing it again.');
-  }
+    // Sending the local file directly avoids React Native's legacy Blob bridge,
+    // which can fail for ImagePicker's cached iOS assets.
+    const photo = new File(photoUri);
+    if (!photo.exists || photo.size === 0) throw new Error('photo file is unavailable');
 
-  try {
-    const response = await fetch(upload.uploadUrl, { body, headers: upload.headers, method: 'PUT' });
-    if (!response.ok) throw new Error('upload failed');
-  } catch {
+    const response = await expoFetch(upload.uploadUrl, {
+      body: photo,
+      headers: upload.headers,
+      method: 'PUT',
+    });
+
+    if (!response.ok) {
+      throw new GatewayError(`Photo upload was rejected by storage (${response.status}).`, response.status);
+    }
+  } catch (error) {
+    if (error instanceof GatewayError) throw error;
     throw new GatewayError('Photo upload failed. Check your connection and try again.');
   }
 }

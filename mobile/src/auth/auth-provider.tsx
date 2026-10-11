@@ -9,7 +9,7 @@ import {
   useState,
 } from 'react';
 
-import { type AuthenticatedUser, type Role, roleFromMetadata } from './types';
+import { demoPersonIdFromMetadata, type AuthenticatedUser, type Role, roleFromMetadata } from './types';
 
 type AuthContextValue = {
   isReady: boolean;
@@ -38,6 +38,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return {
       email,
       name: clerkUser.fullName ?? clerkUser.firstName ?? email ?? 'Nutrix member',
+      personId: demoPersonIdFromMetadata(clerkUser.publicMetadata),
       role: roleFromMetadata(clerkUser.publicMetadata),
     };
   }, [clerkUser, isSignedIn]);

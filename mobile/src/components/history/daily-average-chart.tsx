@@ -8,8 +8,9 @@ type DailyAverageChartProps = {
 };
 
 export function DailyAverageChart({ days, selectedDay }: DailyAverageChartProps) {
-  const minimum = 90;
-  const maximum = 130;
+  const values = days.map((day) => day.averageGlucose);
+  const minimum = Math.floor((Math.min(...values) - 10) / 10) * 10;
+  const maximum = Math.ceil((Math.max(...values) + 10) / 10) * 10;
 
   return (
     <View className="app-card mt-4">
@@ -17,7 +18,7 @@ export function DailyAverageChart({ days, selectedDay }: DailyAverageChartProps)
       <View className="mt-4 flex-row items-end border-b border-line px-2 pt-2">
         {days.map((day) => {
           const selected = day.id === selectedDay;
-          const height = 28 + ((day.averageGlucose - minimum) / (maximum - minimum)) * 50;
+          const height = 28 + ((day.averageGlucose - minimum) / Math.max(1, maximum - minimum)) * 50;
 
           return (
             <View className="flex-1 items-center" key={day.id}>

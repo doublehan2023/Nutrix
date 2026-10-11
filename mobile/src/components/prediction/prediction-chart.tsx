@@ -14,13 +14,15 @@ export type GlucoseChartData = {
 type PredictionChartProps = {
   data: GlucoseChartData;
   day: number;
+  peakGlucose: number;
+  timeToPeak: number;
 };
 
-const yTicks = [80, 100, 120, 140, 160, 180] as const;
 const chartHeight = 210;
 const chartPadding = { bottom: 28, left: 34, right: 8, top: 12 };
 const minGlucose = 80;
 const maxGlucose = 180;
+const glucoseTickStep = 20;
 
 function buildLinePath(values: readonly number[], toX: (index: number) => number, toY: (value: number) => number) {
   return values.map((value, index) => `${index === 0 ? 'M' : 'L'} ${toX(index)} ${toY(value)}`).join(' ');
@@ -41,11 +43,15 @@ function ChartLegend() {
         <View className="mr-2 h-3 w-4 rounded bg-accent" />
         <Text className="text-sm text-copy">Uncertainty</Text>
       </View>
+      <View className="flex-row items-center">
+        <View className="mr-2 h-3 w-3 rounded-full border-2 border-medication bg-surface" />
+        <Text className="text-sm text-copy">Model peak</Text>
+      </View>
     </View>
   );
 }
 
-export function PredictionChart({ data, day }: PredictionChartProps) {
+export function PredictionChart({ data, day, peakGlucose, timeToPeak }: PredictionChartProps) {
   const { width } = useWindowDimensions();
   const xLabelIndexes = [0, 0.25, 0.5, 0.75, 1].map((fraction) =>
     Math.round((data.minutes.length - 1) * fraction),
@@ -53,9 +59,16 @@ export function PredictionChart({ data, day }: PredictionChartProps) {
   const chartWidth = Math.max(260, width - 88);
   const plotWidth = chartWidth - chartPadding.left - chartPadding.right;
   const plotHeight = chartHeight - chartPadding.top - chartPadding.bottom;
+  const chartMax = Math.max(
+    maxGlucose,
+    Math.ceil(Math.max(peakGlucose, ...data.observed, ...data.predicted, ...data.upperBound) / glucoseTickStep) * glucoseTickStep,
+  );
+  const yTicks = Array.from({ length: (chartMax - minGlucose) / glucoseTickStep + 1 }, (_, index) => minGlucose + index * glucoseTickStep);
+  const timeRange = data.minutes[data.minutes.length - 1] - data.minutes[0];
   const toX = (index: number) => chartPadding.left + (index / (data.minutes.length - 1)) * plotWidth;
+  const peakX = chartPadding.left + ((timeToPeak - data.minutes[0]) / timeRange) * plotWidth;
   const toY = (value: number) =>
-    chartPadding.top + ((maxGlucose - value) / (maxGlucose - minGlucose)) * plotHeight;
+    chartPadding.top + ((chartMax - value) / (chartMax - minGlucose)) * plotHeight;
   const uncertaintyPath = [
     ...data.upperBound.map((value, index) => `${index === 0 ? 'M' : 'L'} ${toX(index)} ${toY(value)}`),
     ...data.lowerBound
@@ -102,6 +115,16 @@ export function PredictionChart({ data, day }: PredictionChartProps) {
             strokeLinecap="round"
             strokeWidth={3}
           />
+          <Circle cx={peakX} cy={toY(peakGlucose)} fill={colors.card} r={5} stroke={colors.medication} strokeWidth={3} />
+          <SvgText
+            fill={colors.medication}
+            fontSize={11}
+            fontWeight="600"
+            textAnchor="middle"
+            x={peakX}
+            y={Math.max(chartPadding.top + 10, toY(peakGlucose) - 8)}>
+            Peak {Math.round(peakGlucose)}
+          </SvgText>
           {xLabelIndexes.map((index) => (
             <SvgText
               fill={colors.mutedForeground}
@@ -124,6 +147,9 @@ export function PredictionChart({ data, day }: PredictionChartProps) {
           ))}
         </Svg>
       </View>
+      <Text className="mt-2 text-xs leading-4 text-copy">
+        The dashed line is a 5-minute average trajectory. The model predicts the peak independently, so it may sit above the curve.
+      </Text>
     </View>
   );
 }

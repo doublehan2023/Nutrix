@@ -3,22 +3,21 @@ import { Text, View } from 'react-native';
 type ModelConfidenceCardProps = {
   daysTracked: number;
   loggedMeals: number;
+  responseWindows: number;
 };
 
-export function ModelConfidenceCard({ daysTracked, loggedMeals }: ModelConfidenceCardProps) {
+export function ModelConfidenceCard({ daysTracked, loggedMeals, responseWindows }: ModelConfidenceCardProps) {
   return (
     <View className="app-card mt-4">
       <View className="flex-row items-center justify-between">
-        <Text className="app-card-title">Model confidence</Text>
-        <Text className="text-lg font-medium text-warning">Moderate</Text>
-      </View>
-      <View className="mt-4 h-3 overflow-hidden rounded-full bg-line">
-        <View className="h-full w-[72%] rounded-full bg-warning" />
+        <Text className="app-card-title">Recorded data coverage</Text>
       </View>
       <Text className="mt-4 text-base leading-6 text-copy">
-        {daysTracked} days of CGM, {loggedMeals} logged meals, 0% heart-rate gaps.
+        {daysTracked} days of CGM and {loggedMeals} recorded meals in the displayed baseline.
       </Text>
-      <Text className="mt-1 text-base leading-6 text-copy">Confidence drops for meals unlike those seen so far.</Text>
+      <Text className="mt-1 text-base leading-6 text-copy">
+        {responseWindows} meals had complete 0–120 minute glucose windows for the response calculation.
+      </Text>
     </View>
   );
 }

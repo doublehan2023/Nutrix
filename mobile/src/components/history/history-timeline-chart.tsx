@@ -1,5 +1,5 @@
 import { Text, useWindowDimensions, View } from 'react-native';
-import Svg, { Circle, Line, Path, Polygon, Text as SvgText } from 'react-native-svg';
+import Svg, { Line, Path, Polygon, Text as SvgText } from 'react-native-svg';
 
 import type { HistoryDay, HistorySeriesPoint } from '@/data/history';
 import { colors } from '../../../constants/theme';
@@ -10,7 +10,6 @@ type HistoryTimelineChartProps = {
 
 const chartHeight = 180;
 const chartPadding = { bottom: 28, left: 30, right: 8, top: 10 };
-const yTicks = [60, 100, 140, 180] as const;
 const xTicks = [0, 6, 12, 18, 24] as const;
 
 function makePath(points: readonly HistorySeriesPoint[], toX: (hour: number) => number, toY: (value: number) => number) {
@@ -34,13 +33,17 @@ export function HistoryTimelineChart({ day }: HistoryTimelineChartProps) {
   const chartWidth = Math.max(220, width - 80);
   const plotWidth = chartWidth - chartPadding.left - chartPadding.right;
   const plotHeight = chartHeight - chartPadding.top - chartPadding.bottom;
+  const plottedValues = [...day.glucose, ...day.heartRate, ...day.events].map((point) => point.value);
+  const minimum = Math.max(0, Math.floor((Math.min(...plottedValues) - 10) / 20) * 20);
+  const maximum = Math.ceil((Math.max(...plottedValues) + 10) / 20) * 20;
+  const yTicks = Array.from({ length: 5 }, (_, index) => minimum + ((maximum - minimum) / 4) * index);
   const toX = (hour: number) => chartPadding.left + (hour / 24) * plotWidth;
-  const toY = (value: number) => chartPadding.top + ((180 - value) / 120) * plotHeight;
+  const toY = (value: number) => chartPadding.top + ((maximum - value) / Math.max(1, maximum - minimum)) * plotHeight;
 
   return (
     <View className="app-card mt-4">
       <Text className="app-card-title">
-        Day {day.id.slice(1)} · glucose, heart rate, meals
+        Your glucose and heart rate history for {day.id}
       </Text>
       <View className="mt-2 items-center">
         <Svg height={chartHeight} width={chartWidth} accessibilityLabel={`24-hour history chart for ${day.id}`}>
@@ -73,7 +76,7 @@ export function HistoryTimelineChart({ day }: HistoryTimelineChartProps) {
             const y = toY(event.value);
 
             if (event.kind === 'meal') {
-              return <Circle cx={x} cy={y} fill={colors.meal} key={`${event.kind}-${index}`} r={5} />;
+              return null;
             }
 
             return (
@@ -92,16 +95,15 @@ export function HistoryTimelineChart({ day }: HistoryTimelineChartProps) {
               textAnchor={tick === 0 ? 'start' : tick === 24 ? 'end' : 'middle'}
               x={toX(tick)}
               y={chartHeight - 6}>
-              {String(tick).padStart(2, '0')}:00
+              {tick}h
             </SvgText>
           ))}
         </Svg>
       </View>
+      <Text className="mt-2 text-xs text-copy">Hours since the sampled day began.</Text>
       <View className="mt-2 flex-row flex-wrap gap-x-4 gap-y-2">
         <LegendItem color={colors.success} label="Glucose" />
         <LegendItem color={colors.heartRate} label="Heart rate" />
-        <LegendItem color={colors.meal} label="Meal" />
-        <LegendItem color={colors.medication} diamond label="Medication" />
       </View>
     </View>
   );

@@ -6,24 +6,34 @@ import { DailyAverageChart } from '@/components/history/daily-average-chart';
 import { DaySelector } from '@/components/history/day-selector';
 import { HistoryTimelineChart } from '@/components/history/history-timeline-chart';
 import { LoggedMealsList } from '@/components/history/logged-meals-list';
-import { historyByDay, historyDayOrder, type HistoryDayId } from '@/data/history';
-
-const historyDays = historyDayOrder.map((day) => historyByDay[day]);
+import { getDemoHistory } from '@/data/demo-history';
+import type { HistoryDayId } from '@/data/history';
+import { useAuth } from '@/auth/auth-provider';
 
 export default function HistoryScreen() {
+  const { user } = useAuth();
+  const history = getDemoHistory(user?.personId);
   const [selectedDayId, setSelectedDayId] = useState<HistoryDayId>('D7');
-  const selectedDay = historyByDay[selectedDayId];
+  const selectedDay = history.days.find((day) => day.id === selectedDayId) ?? history.latestDay;
 
   return (
     <SafeAreaView className="app-screen" edges={['top']}>
       <ScrollView contentContainerClassName="app-scroll-content" showsVerticalScrollIndicator={false}>
         <Text className="app-page-title">History</Text>
+        <View className="mt-2">
+          <Text className="text-sm text-copy">
+            {history.participantLabel} · 7-day CGMacros baseline · {history.sourceWindow}
+          </Text>
+        </View>
         <View className="mt-5">
-          <DaySelector days={historyDayOrder} onSelect={setSelectedDayId} selectedDay={selectedDayId} />
+          <DaySelector days={history.days.map((day) => day.id)} onSelect={setSelectedDayId} selectedDay={selectedDayId} />
         </View>
         <HistoryTimelineChart day={selectedDay} />
-        <DailyAverageChart days={historyDays} selectedDay={selectedDayId} />
-        <LoggedMealsList day={selectedDay} />
+        <DailyAverageChart days={history.days} selectedDay={selectedDayId} />
+        {selectedDay.meals.length > 0 ? <LoggedMealsList day={selectedDay} /> : null}
+        <Text className="mt-5 text-center text-xs leading-5 text-copy">
+          Each day uses recorded CGMacros samples; meal details are available for the final sampled day.
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
