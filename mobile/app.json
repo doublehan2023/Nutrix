@@ -26,6 +26,14 @@
     "plugins": [
       "expo-router",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Nutrix to access your photos so you can add a meal photo.",
+          "cameraPermission": "Allow Nutrix to use your camera so you can capture a meal photo.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",
