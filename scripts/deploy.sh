@@ -44,7 +44,8 @@ aws cloudformation deploy --stack-name "$STACK" --template-file "$ROOT/infra/pmr
   --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset \
   --parameter-overrides ImageUri="$IMAGE" VpcId="$VPC" SubnetA="$SUBNET_A" SubnetB="$SUBNET_B" \
     ClerkJwtIssuer="$CLERK_JWT_ISSUER" ClerkJwtAudience="$CLERK_JWT_AUDIENCE" \
-    MobileCorsOrigins="${MOBILE_CORS_ORIGINS:-http://localhost:8081,http://localhost:8082}"
+    MobileCorsOrigins="${MOBILE_CORS_ORIGINS:-http://localhost:8081,http://localhost:8082}" \
+    MobileDemoPersonIds="${MOBILE_DEMO_PERSON_IDS:-cgmacros-003,cgmacros-002}"
 
 URL="$(aws cloudformation describe-stacks --stack-name "$STACK" --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text)"
 echo "==> $URL/healthz"

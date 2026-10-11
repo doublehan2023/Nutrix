@@ -1,5 +1,4 @@
 """Clerk-authenticated mobile facade for the PMRF service."""
-import hashlib
 import os
 from dataclasses import dataclass
 
@@ -16,7 +15,9 @@ class MobileIdentity:
 @dataclass(frozen=True)
 class ClerkConfig:
     audience: str
+    demo_person_ids: frozenset[str]
     issuer: str
+    person_id_claim: str
     role_claim: str
 
 
@@ -28,16 +29,18 @@ def _required(name: str) -> str:
 
 
 def clerk_config() -> ClerkConfig:
+    demo_person_ids = frozenset(
+        person_id.strip() for person_id in _required("MOBILE_DEMO_PERSON_IDS").split(",") if person_id.strip()
+    )
+    if not demo_person_ids:
+        raise RuntimeError("MOBILE_DEMO_PERSON_IDS must contain at least one PMRF person ID")
     return ClerkConfig(
         audience=_required("CLERK_JWT_AUDIENCE"),
+        demo_person_ids=demo_person_ids,
         issuer=_required("CLERK_JWT_ISSUER").rstrip("/"),
+        person_id_claim=os.environ.get("CLERK_PERSON_ID_CLAIM", "pmrf_person_id"),
         role_claim=os.environ.get("CLERK_ROLE_CLAIM", "role"),
     )
-
-
-def person_id_for(subject: str) -> str:
-    """Return a PMRF-compatible ID that cannot be selected by a caller."""
-    return f"clerk-{hashlib.sha256(subject.encode()).hexdigest()[:32]}"
 
 
 def verify_mobile_request(request: Request) -> MobileIdentity:
@@ -64,7 +67,9 @@ def verify_mobile_request(request: Request) -> MobileIdentity:
     if not isinstance(role, str) or role.lower() not in {"admin", "clinician", "patient"}:
         raise HTTPException(403, "session token has no authorized Nutrix role")
 
-    subject = claims.get("sub")
-    if not isinstance(subject, str) or not subject:
-        raise HTTPException(401, "session token has no user subject")
-    return MobileIdentity(person_id=person_id_for(subject), role=role.lower())
+    person_id = claims.get(config.person_id_claim)
+    if not isinstance(person_id, str) or not person_id:
+        raise HTTPException(403, "session token has no assigned demo patient")
+    if person_id not in config.demo_person_ids:
+        raise HTTPException(403, "session token is not assigned to an enabled demo patient")
+    return MobileIdentity(person_id=person_id, role=role.lower())
