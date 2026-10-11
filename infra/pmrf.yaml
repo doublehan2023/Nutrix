@@ -20,6 +20,16 @@ Parameters:
   DesiredCount:
     Type: Number
     Default: 1
+  ClerkJwtIssuer:
+    Type: String
+    Description: Clerk JWT issuer, for example https://example.clerk.accounts
+  ClerkJwtAudience:
+    Type: String
+    Description: Required aud claim in the Clerk session-token template
+  MobileCorsOrigins:
+    Type: String
+    Default: http://localhost:8081,http://localhost:8082
+    Description: Comma-separated browser origins allowed to call the mobile gateway
 
 Resources:
   # ---------- API key (x-api-key, checked by the service until API Gateway auth is set up)
@@ -207,6 +217,9 @@ Resources:
             - {Name: PMRF_MAX_CONCURRENT, Value: "2"}
             - {Name: PMRF_TABLE, Value: !Ref PeopleTable}
             - {Name: PMRF_STATE_BUCKET, Value: !Ref StateBucket}
+            - {Name: CLERK_JWT_ISSUER, Value: !Ref ClerkJwtIssuer}
+            - {Name: CLERK_JWT_AUDIENCE, Value: !Ref ClerkJwtAudience}
+            - {Name: MOBILE_CORS_ORIGINS, Value: !Ref MobileCorsOrigins}
           Secrets:
             - {Name: PMRF_API_KEY, ValueFrom: !Ref ApiKeySecret}
           LogConfiguration:

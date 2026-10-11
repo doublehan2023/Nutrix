@@ -5,6 +5,7 @@ import '@/global.css';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/auth/auth-provider';
 import { MealDraftProvider } from '@/features/meals/meal-draft-context';
+import { HealthQuestionnaireProvider } from '@/features/profile/health-questionnaire-context';
 import { ClerkProvider } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { colors } from '../../constants/theme';
@@ -27,6 +28,8 @@ function RootNavigator() {
         <Stack.Screen name="index" />
         <Stack.Protected guard={isReady && Boolean(user)}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="health-questionnaire" />
+          <Stack.Screen name="profile" />
           <Stack.Screen name="meal-edit" />
           <Stack.Screen name="prediction" />
         </Stack.Protected>
@@ -42,9 +45,11 @@ export default function RootLayout() {
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <AuthProvider>
-        <MealDraftProvider>
-          <RootNavigator />
-        </MealDraftProvider>
+        <HealthQuestionnaireProvider>
+          <MealDraftProvider>
+            <RootNavigator />
+          </MealDraftProvider>
+        </HealthQuestionnaireProvider>
       </AuthProvider>
     </ClerkProvider>
   );

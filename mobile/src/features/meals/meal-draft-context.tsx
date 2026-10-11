@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState, type PropsWithChildren } from 'react';
 
 import type { MealPhoto } from '@/features/meals/meal-photo';
+import type { Prediction } from '@/api/gateway';
 
 export const mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snack'] as const;
 
@@ -17,6 +18,8 @@ export type MealDraft = {
 type MealDraftContextValue = {
   discardDraft: () => void;
   draft: MealDraft | null;
+  prediction: Prediction | null;
+  setPrediction: (prediction: Prediction | null) => void;
   startDraft: (photo: MealPhoto) => void;
   updateDraft: (changes: Partial<Omit<MealDraft, 'photo'>>) => void;
   updatePhoto: (photo: MealPhoto) => void;
@@ -35,14 +38,18 @@ function mealTypeForTime(date: Date): MealType {
 
 export function MealDraftProvider({ children }: PropsWithChildren) {
   const [draft, setDraft] = useState<MealDraft | null>(null);
+  const [prediction, setPrediction] = useState<Prediction | null>(null);
 
   const value = useMemo<MealDraftContextValue>(
     () => ({
       draft,
+      prediction,
       startDraft(photo) {
         const mealTime = new Date();
+        setPrediction(null);
         setDraft({ carbohydrates: 0, mealName: '', mealTime, mealType: mealTypeForTime(mealTime), photo });
       },
+      setPrediction,
       updateDraft(changes) {
         setDraft((current) => (current ? { ...current, ...changes } : current));
       },
@@ -50,10 +57,11 @@ export function MealDraftProvider({ children }: PropsWithChildren) {
         setDraft((current) => (current ? { ...current, photo } : current));
       },
       discardDraft() {
+        setPrediction(null);
         setDraft(null);
       },
     }),
-    [draft],
+    [draft, prediction],
   );
 
   return <MealDraftContext.Provider value={value}>{children}</MealDraftContext.Provider>;

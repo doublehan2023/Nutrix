@@ -14,6 +14,8 @@ VERSION="${1:-${MODEL_VERSION:-v7-20261010}}"
 export AWS_PROFILE="${AWS_PROFILE:-nutrix}" AWS_REGION="${AWS_REGION:-us-west-2}"
 STACK="${STACK:-pmrf}"
 REPO=pmrf-api
+: "${CLERK_JWT_ISSUER:?set CLERK_JWT_ISSUER before deploying}"
+: "${CLERK_JWT_AUDIENCE:?set CLERK_JWT_AUDIENCE before deploying}"
 
 ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 REGISTRY="$ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com"
@@ -40,7 +42,9 @@ read -r SUBNET_A SUBNET_B < <(aws ec2 describe-subnets --filters Name=vpc-id,Val
 echo "==> stack $STACK (ECS waits for the new task to pass health checks; first run ~10 min)"
 aws cloudformation deploy --stack-name "$STACK" --template-file "$ROOT/infra/pmrf.yaml" \
   --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset \
-  --parameter-overrides ImageUri="$IMAGE" VpcId="$VPC" SubnetA="$SUBNET_A" SubnetB="$SUBNET_B"
+  --parameter-overrides ImageUri="$IMAGE" VpcId="$VPC" SubnetA="$SUBNET_A" SubnetB="$SUBNET_B" \
+    ClerkJwtIssuer="$CLERK_JWT_ISSUER" ClerkJwtAudience="$CLERK_JWT_AUDIENCE" \
+    MobileCorsOrigins="${MOBILE_CORS_ORIGINS:-http://localhost:8081,http://localhost:8082}"
 
 URL="$(aws cloudformation describe-stacks --stack-name "$STACK" --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text)"
 echo "==> $URL/healthz"

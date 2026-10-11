@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,11 +9,17 @@ import { MealTimeField } from '@/components/meals/meal-time-field';
 import { MealTypeSelector } from '@/components/meals/meal-type-selector';
 import { useMealDraft } from '@/features/meals/meal-draft-context';
 import { useMealPhotoPicker } from '@/hooks/use-meal-photo-picker';
+import { createGatewayClient, uploadMealPhoto } from '@/api/gateway';
+import { useAuth } from '@/auth/auth-provider';
 
 export default function MealEditScreen() {
   const router = useRouter();
-  const { discardDraft, draft, updateDraft, updatePhoto } = useMealDraft();
+  const { discardDraft, draft, setPrediction, updateDraft, updatePhoto } = useMealDraft();
+  const { getSessionToken } = useAuth();
+  const gateway = useMemo(() => createGatewayClient({ getToken: getSessionToken }), [getSessionToken]);
   const [nameError, setNameError] = useState<string>();
+  const [predictionError, setPredictionError] = useState<string>();
+  const [isPredicting, setIsPredicting] = useState(false);
   const [carbohydratesInput, setCarbohydratesInput] = useState(String(draft?.carbohydrates ?? 0));
   const { choosePhotoSource, status } = useMealPhotoPicker({ onPhotoReady: updatePhoto });
 
@@ -42,13 +48,29 @@ export default function MealEditScreen() {
     updateDraft({ carbohydrates: Number.isFinite(carbohydrates) ? carbohydrates : 0 });
   }
 
-  function openPrediction() {
+  async function openPrediction() {
     if (!draft?.mealName.trim()) {
       setNameError('Enter a meal name before creating a prediction.');
       return;
     }
-
-    router.push('/prediction');
+    setPredictionError(undefined);
+    setIsPredicting(true);
+    try {
+      const upload = await gateway.createPhotoUpload();
+      await uploadMealPhoto(draft.photo.uri, upload);
+      const prediction = await gateway.requestPrediction({
+        logMeal: true,
+        mealTime: draft.mealTime.toISOString(),
+        mealType: draft.mealType.toLowerCase() as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+        photoKey: upload.photoKey,
+      });
+      setPrediction(prediction);
+      router.push('/prediction');
+    } catch (error) {
+      setPredictionError(error instanceof Error ? error.message : 'Unable to create a prediction. Try again.');
+    } finally {
+      setIsPredicting(false);
+    }
   }
 
   return (
@@ -107,9 +129,10 @@ export default function MealEditScreen() {
 
           <MealPhotoPreview onReplace={choosePhotoSource} photo={draft.photo} status={status} />
 
-          <Pressable accessibilityRole="button" className="app-button-primary mt-5" onPress={openPrediction}>
-            <Text className="text-lg font-bold text-on-brand">Predict glucose response</Text>
+          <Pressable accessibilityRole="button" className="app-button-primary mt-5" disabled={isPredicting} onPress={openPrediction}>
+            {isPredicting ? <ActivityIndicator color={colors.onPrimary} /> : <Text className="text-lg font-bold text-on-brand">Predict glucose response</Text>}
           </Pressable>
+          {predictionError ? <Text className="mt-3 text-center text-sm text-danger">{predictionError}</Text> : null}
           <Text className="mt-4 text-center text-sm leading-5 text-copy">
             Uses your last 7 days of CGM, heart rate, and medication data to personalize the prediction.
           </Text>

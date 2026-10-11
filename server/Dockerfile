@@ -3,5 +3,7 @@
 ARG BASE_IMAGE=pmrf-api:v7-20261010
 FROM ${BASE_IMAGE}
 
+COPY server/requirements.txt /tmp/server-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/server-requirements.txt
 COPY server/ /app/server/
 CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1", "--timeout-keep-alive", "75"]

@@ -41,15 +41,9 @@ export default function SecondFactorScreen() {
     try {
       const result =
         selectedFactor.strategy === "email_code"
-          ? await signIn.prepareSecondFactor({
-              strategy: "email_code",
-              emailAddressId: selectedFactor.emailAddressId,
-            })
+          ? await signIn.mfa.sendEmailCode()
           : selectedFactor.strategy === "phone_code"
-            ? await signIn.prepareSecondFactor({
-                strategy: "phone_code",
-                phoneNumberId: selectedFactor.phoneNumberId,
-              })
+            ? await signIn.mfa.sendPhoneCode()
             : undefined;
       if (result?.error) {
         setError(messageForClerkError(result.error));
@@ -75,24 +69,12 @@ export default function SecondFactorScreen() {
     try {
       const result =
         selectedFactor.strategy === "email_code"
-          ? await signIn.attemptSecondFactor({
-              strategy: "email_code",
-              code: code.trim(),
-            })
+          ? await signIn.mfa.verifyEmailCode({ code: code.trim() })
           : selectedFactor.strategy === "phone_code"
-            ? await signIn.attemptSecondFactor({
-                strategy: "phone_code",
-                code: code.trim(),
-              })
+            ? await signIn.mfa.verifyPhoneCode({ code: code.trim() })
             : selectedFactor.strategy === "totp"
-              ? await signIn.attemptSecondFactor({
-                  strategy: "totp",
-                  code: code.trim(),
-                })
-              : await signIn.attemptSecondFactor({
-                  strategy: "backup_code",
-                  code: code.trim(),
-                });
+              ? await signIn.mfa.verifyTOTP({ code: code.trim() })
+              : await signIn.mfa.verifyBackupCode({ code: code.trim() });
       if (result.error) {
         setError(messageForClerkError(result.error));
         return;

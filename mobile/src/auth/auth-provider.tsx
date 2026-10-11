@@ -18,13 +18,14 @@ type AuthContextValue = {
   beginRoleLogin: (role: Role) => void;
   cancelRoleLogin: () => void;
   clearSignInError: () => void;
+  getSessionToken: () => Promise<string | null>;
   signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const { isLoaded: isAuthLoaded, isSignedIn } = useClerkAuth();
+  const { getToken, isLoaded: isAuthLoaded, isSignedIn } = useClerkAuth();
   const { isLoaded: isUserLoaded, user: clerkUser } = useUser();
   const { signOut: clerkSignOut } = useClerk();
   const [selectedRole, setSelectedRole] = useState<Role>();
@@ -73,6 +74,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     await clerkSignOut();
   }, [clerkSignOut]);
 
+  const getSessionToken = useCallback(async () => {
+    if (!isSignedIn) return null;
+    return getToken();
+  }, [getToken, isSignedIn]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       isReady: isAuthLoaded && isUserLoaded,
@@ -81,12 +87,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       beginRoleLogin,
       cancelRoleLogin,
       clearSignInError,
+      getSessionToken,
       signOut,
     }),
     [
       beginRoleLogin,
       cancelRoleLogin,
       clearSignInError,
+      getSessionToken,
       isAuthLoaded,
       isUserLoaded,
       resolvedUser,
